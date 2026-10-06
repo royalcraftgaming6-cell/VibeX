@@ -17,6 +17,7 @@ module.exports = {
       return ctx.sendError('There is nothing currently playing to skip.');
     }
 
+    player.textChannel = ctx.channel;
     const skippedTitle = player.currentTrack ? player.currentTrack.title : (player.previousTrack ? player.previousTrack.title : 'Current Track');
     player.skip();
     return ctx.reply({ embeds: [successEmbed(`Skipped **${skippedTitle}**`)] });

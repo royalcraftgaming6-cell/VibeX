@@ -87,6 +87,8 @@ module.exports = {
         });
       }
 
+      player.textChannel = interaction.channel;
+
       if (!isDJ(interaction.member)) {
         return interaction.reply({
           embeds: [errorEmbed('You must have the DJ role to use player buttons.')],

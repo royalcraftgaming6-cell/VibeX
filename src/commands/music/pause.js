@@ -16,6 +16,8 @@ module.exports = {
       return ctx.sendError('There is nothing currently playing to pause.');
     }
 
+    player.textChannel = ctx.channel;
+
     if (player.isPaused) {
       return ctx.sendError('Playback is already paused. Use `/resume` to resume.');
     }

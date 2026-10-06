@@ -41,19 +41,25 @@ module.exports = {
     try {
       if (!player.connection || !botVoiceChannel) {
         await player.connect(voiceChannel, ctx.channel);
+      } else {
+        player.textChannel = ctx.channel;
+        if (voiceChannel) player.voiceChannel = voiceChannel;
       }
     } catch (err) {
       console.error('Failed to connect to voice channel:', err);
       return ctx.sendError('Failed to join the voice channel. Please check my channel permissions!');
     }
+    player.textChannel = ctx.channel;
 
     const track = await ctx.manager.resolveTrack(query, ctx.user);
     if (!track) {
       return ctx.sendError(`No tracks found matching: **${query}**`);
     }
 
-    // If a track is already playing, add to queue
-    if (player.currentTrack) {
+    // Check if player is actively playing or buffering
+    const isActivelyPlaying = player.currentTrack && player.audioPlayer?.state?.status && player.audioPlayer.state.status !== 'idle';
+
+    if (isActivelyPlaying) {
       player.queue.add(track);
       const userTrackVibe = ctx.manager.detectMusicProfile(track.title, track.artist);
       player.sessionVibe = userTrackVibe;

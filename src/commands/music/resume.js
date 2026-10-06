@@ -17,7 +17,9 @@ module.exports = {
       return ctx.sendError('There is nothing currently playing to resume.');
     }
 
-    if (!player.isPaused) {
+    player.textChannel = ctx.channel;
+
+    if (!player.isPaused && player.audioPlayer?.state?.status !== 'paused') {
       return ctx.sendError('Playback is not paused.');
     }
 

@@ -45,16 +45,23 @@ class MusicManager {
   }
 
   async initSources() {
+    await this.ensureSoundCloud();
+  }
+
+  async ensureSoundCloud() {
+    if (this.soundCloudReady) return true;
     try {
       const clientId = await play.getFreeClientID();
       if (clientId) {
         await play.setToken({ soundcloud: { client_id: clientId } });
         this.soundCloudReady = true;
         console.log('[MusicManager] SoundCloud streaming source ready.');
+        return true;
       }
     } catch (err) {
       console.warn('[MusicManager] SoundCloud token notice:', err.message);
     }
+    return false;
   }
 
   getPlayer(guild, create = false) {
@@ -118,15 +125,20 @@ class MusicManager {
     const pipeParts = clean.split('|').map(s => s.trim()).filter(Boolean);
 
     if (pipeParts.length > 1) {
-      songName = pipeParts[0].split(' - ')[0].trim();
-      for (let i = 1; i < pipeParts.length; i++) {
-        const seg = pipeParts[i];
-        if (isRecordLabel(seg) || /official|video|4k|hd|lyrics|audio|visualizer/i.test(seg) || seg.length < 2 || seg.length > 35) continue;
-        if (INDIAN_SINGERS_REGEX.test(seg)) {
-          detectedArtist = seg;
-          break;
+      if (pipeParts[0].length <= 25 && INDIAN_SINGERS_REGEX.test(pipeParts[0]) && !/zara|ishq|pyar|dil|tere|tera|teri|deewana|zindagi|sohne|jatt/i.test(pipeParts[0])) {
+        detectedArtist = pipeParts[0];
+        songName = pipeParts[1].replace(/-(audio|lyric|video|visualizer).*/i, '').trim();
+      } else {
+        songName = pipeParts[0].split(' - ')[0].trim();
+        for (let i = 1; i < pipeParts.length; i++) {
+          const seg = pipeParts[i];
+          if (isRecordLabel(seg) || /official|video|4k|hd|lyrics|audio|visualizer/i.test(seg) || seg.length < 2 || seg.length > 35) continue;
+          if (INDIAN_SINGERS_REGEX.test(seg)) {
+            detectedArtist = seg;
+            break;
+          }
+          if (!detectedArtist) detectedArtist = seg;
         }
-        if (!detectedArtist) detectedArtist = seg;
       }
     } else if (clean.includes(' - ')) {
       const parts = clean.split(' - ').map(s => s.trim());
@@ -223,6 +235,7 @@ class MusicManager {
   }
 
   async searchSoundCloud(query, requestedBy) {
+    await this.ensureSoundCloud();
     try {
       const results = await play.search(query, {
         limit: 1,

@@ -55,6 +55,13 @@ class Player {
       this.handleSongEnd();
     });
 
+    this.audioPlayer.on('stateChange', (oldState, newState) => {
+      console.log(`[AudioPlayer - Guild ${this.guild.id}] State: ${oldState.status} -> ${newState.status}`);
+      if (newState.status === AudioPlayerStatus.Playing && this.isPaused) {
+        this.audioPlayer.pause();
+      }
+    });
+
     this.audioPlayer.on('error', (error) => {
       console.error(`[AudioPlayer Error - Guild ${this.guild.id}]:`, error.message);
       if (this.textChannel) {
@@ -137,49 +144,80 @@ class Player {
     }
 
     try {
-      let streamInfo;
-      if (this.currentTrack.url && (this.currentTrack.url.endsWith('.mp3') || this.currentTrack.url.endsWith('.ogg') || this.currentTrack.isDirect)) {
-        this.currentResource = createAudioResource(this.currentTrack.url, {
-          inlineVolume: true
-        });
-      } else {
-        try {
-          streamInfo = await play.stream(this.currentTrack.url);
-          this.currentResource = createAudioResource(streamInfo.stream, {
-            inputType: streamInfo.type,
-            inlineVolume: true
-          });
-        } catch (streamErr) {
-          console.warn('[Player] Initial stream error:', streamErr.message);
-          // If stream failed (e.g. YouTube 429), try finding alternative on SoundCloud
-          const scFallback = await this.manager.searchSoundCloud(this.currentTrack.title, this.currentTrack.requestedBy);
-          if (scFallback) {
-            console.log(`[Player] Fallback found on SoundCloud: ${scFallback.title}`);
-            this.currentTrack = scFallback;
-            streamInfo = await play.stream(scFallback.url);
-            this.currentResource = createAudioResource(streamInfo.stream, {
-              inputType: streamInfo.type,
-              inlineVolume: true
-            });
-          } else {
-            throw streamErr;
-          }
-        }
-      }
-
+      this.currentResource = await this.createAudioResourceForTrack(this.currentTrack);
       this.currentResource.volume.setVolume(this.volume / 100);
+
       this.audioPlayer.play(this.currentResource);
       this.isPaused = false;
 
       await this.sendNowPlaying();
     } catch (err) {
-      console.error('Error starting track playback:', err);
+      console.error('[Player] Error starting track playback:', err);
       if (this.textChannel) {
         this.textChannel.send({ embeds: [errorEmbed(`Could not play track: **${this.currentTrack ? this.currentTrack.title : 'Selected track'}** (${err.message})`)] }).catch(() => {});
       }
       this.isFetchingAutoplay = false;
       this.handleSongEnd();
     }
+  }
+
+  async createAudioResourceForTrack(track) {
+    await this.manager.ensureSoundCloud();
+
+    // 1. Direct audio file URL (.mp3, .ogg, .wav, or raw audio link)
+    if (track.url && (track.url.endsWith('.mp3') || track.url.endsWith('.ogg') || track.url.endsWith('.wav') || track.isDirect)) {
+      return createAudioResource(track.url, { inlineVolume: true });
+    }
+
+    // 2. Direct SoundCloud track
+    if (track.url && (track.url.includes('soundcloud.com') || track.source === 'soundcloud')) {
+      const streamInfo = await play.stream(track.url);
+      return createAudioResource(streamInfo.stream, {
+        inputType: streamInfo.type,
+        inlineVolume: true
+      });
+    }
+
+    // 3. YouTube or generic track: stream via SoundCloud mirror
+    // YouTube stream URLs are blocked with 400 / ERR_INVALID_URL on datacenter IPs,
+    // so SoundCloud provides the reliable, high quality stream.
+    const cleanTitle = this.manager.cleanTitle(track.title);
+    const queries = [];
+    if (track.artist && !['youtube', 'various artists', 'unknown', 'web audio', 'channel'].includes(track.artist.toLowerCase())) {
+      queries.push(`${cleanTitle} ${track.artist}`);
+    }
+    queries.push(cleanTitle);
+    if (track.title !== cleanTitle) {
+      queries.push(track.title);
+    }
+
+    for (const q of queries) {
+      try {
+        const scResults = await play.search(q, { limit: 2, source: { soundcloud: 'tracks' } });
+        if (scResults && scResults.length > 0) {
+          const match = scResults[0];
+          console.log(`[Player] Streaming audio from SoundCloud: "${match.name || match.title}" for "${track.title}"`);
+          const streamInfo = await play.stream(match.url);
+          return createAudioResource(streamInfo.stream, {
+            inputType: streamInfo.type,
+            inlineVolume: true
+          });
+        }
+      } catch (scErr) {
+        console.warn(`[Player] SoundCloud stream search notice for "${q}":`, scErr.message);
+      }
+    }
+
+    // 4. Fallback attempt directly on track.url if available
+    if (track.url) {
+      const streamInfo = await play.stream(track.url);
+      return createAudioResource(streamInfo.stream, {
+        inputType: streamInfo.type,
+        inlineVolume: true
+      });
+    }
+
+    throw new Error('Unable to find a playable audio stream for this track.');
   }
 
   async sendNowPlaying() {
@@ -342,29 +380,33 @@ class Player {
   }
 
   pause() {
-    if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+    this.isPaused = true;
+    if (this.audioPlayer && (this.audioPlayer.state.status === AudioPlayerStatus.Playing || this.audioPlayer.state.status === AudioPlayerStatus.Buffering)) {
       this.audioPlayer.pause();
-      this.isPaused = true;
-      this.updateNowPlayingMessage();
-      return true;
     }
-    return false;
+    this.updateNowPlayingMessage();
+    return true;
   }
 
   resume() {
-    if (this.isPaused) {
+    this.isPaused = false;
+    if (this.audioPlayer && this.audioPlayer.state.status === AudioPlayerStatus.Paused) {
       this.audioPlayer.unpause();
-      this.isPaused = false;
-      this.updateNowPlayingMessage();
-      return true;
     }
-    return false;
+    this.updateNowPlayingMessage();
+    return true;
   }
 
   skip() {
     this.isFetchingAutoplay = false;
     if (this.audioPlayer) {
-      this.audioPlayer.stop(); // Triggers AudioPlayerStatus.Idle -> handleSongEnd
+      if (this.audioPlayer.state.status !== AudioPlayerStatus.Idle) {
+        this.audioPlayer.stop(); // Triggers AudioPlayerStatus.Idle -> handleSongEnd
+      } else {
+        this.handleSongEnd();
+      }
+    } else {
+      this.handleSongEnd();
     }
     return true;
   }
