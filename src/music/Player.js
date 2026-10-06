@@ -39,6 +39,7 @@ class Player {
     this.isPaused = false;
     this.disconnectTimeout = null;
     this.isFetchingAutoplay = false;
+    this.sessionVibe = null;
 
     this.initAudioPlayer();
   }
@@ -116,6 +117,13 @@ class Player {
 
     if (!this.currentTrack) {
       return this.handleQueueEmpty();
+    }
+
+    const detectedVibe = this.manager.detectMusicProfile(this.currentTrack.title, this.currentTrack.artist);
+    if (!this.currentTrack.isAutoplay) {
+      this.sessionVibe = detectedVibe;
+    } else if (!this.sessionVibe) {
+      this.sessionVibe = detectedVibe;
     }
 
     if (this.currentTrack.url) {
@@ -243,13 +251,16 @@ class Player {
         this.nowPlayingMessage = null;
       }
 
+      const targetVibe = this.sessionVibe || this.manager.detectMusicProfile(referenceTrack.title, referenceTrack.artist);
+      const vibeTag = targetVibe ? targetVibe.charAt(0).toUpperCase() + targetVibe.slice(1) : 'Similar';
+
       if (this.textChannel) {
         this.textChannel.send({
-          embeds: [infoEmbed('📻 Autoplay', `Queue finished. Finding similar songs like **${referenceTrack.title}**...`)]
+          embeds: [infoEmbed('📻 Autoplay', `Queue finished. Finding similar **${vibeTag}** songs like **${referenceTrack.title}**...`)]
         }).catch(() => {});
       }
 
-      const nextTrack = await this.manager.getAutoplayTrack(referenceTrack, this.history);
+      const nextTrack = await this.manager.getAutoplayTrack(referenceTrack, this.history, targetVibe);
 
       if (!this.connection || !this.audioPlayer) {
         this.isFetchingAutoplay = false;
@@ -265,7 +276,7 @@ class Player {
       if (nextTrack) {
         if (this.textChannel) {
           this.textChannel.send({
-            embeds: [successEmbed(`📻 Autoplay: Next song **[${nextTrack.title}](${nextTrack.url})** by *${nextTrack.artist}* (similar to *${referenceTrack.title}*)`)]
+            embeds: [successEmbed(`📻 Autoplay [${vibeTag}]: Next song **[${nextTrack.title}](${nextTrack.url})** by *${nextTrack.artist}* (similar to *${referenceTrack.title}*)`)]
           }).catch(() => {});
         }
         this.isFetchingAutoplay = false;
@@ -273,7 +284,7 @@ class Player {
       } else {
         if (this.textChannel) {
           this.textChannel.send({
-            embeds: [infoEmbed('📻 Autoplay', 'Could not find more similar songs. Playback ended.')]
+            embeds: [infoEmbed('📻 Autoplay', `Could not find more **${vibeTag}** songs. Playback ended.`)]
           }).catch(() => {});
         }
         this.isFetchingAutoplay = false;

@@ -1,6 +1,86 @@
 const play = require('play-dl');
 const Player = require('./Player');
 
+const RECORD_LABELS = new Set([
+  't-series', 'tseries', 'zee music company', 'zee music', 'sony music india',
+  'sony music', 'sonymusicindiavevo', 'yrf', 'tips official', 'tips music',
+  'speed records', 'white hill music', 'saregama music', 'saregama', 'geet mp3',
+  'times music', 'venus', 'aditya music', 'lahari music', 'desi melodies',
+  'dm - desi melodies', 'coke studio', '7clouds', 'speed punjabi', 'eros now',
+  't-series apna punjab', 'worldwide records', 'drj records', 'speed records bhojpuri'
+]);
+
+const INDIAN_SCRIPTS_REGEX = /[\u0900-\u097F\u0A00-\u0A7F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F\u0A80-\u0AFF\u0600-\u06FF]/;
+const KOREAN_REGEX = /[\uAC00-\uD7AF\u1100-\u11FF]/;
+const JAPANESE_REGEX = /[\u3040-\u309F\u30A0-\u30FF]/;
+
+const INDIAN_KEYWORDS = [
+  'hindi', 'bollywood', 'punjabi', 'bhojpuri', 'haryanvi', 'tamil', 'telugu',
+  'malayalam', 'kannada', 'marathi', 'bengali', 'gujarati', 'sufi', 'ghazal',
+  'qawwali', 'bhajan', 'kirtan', 'desi', 'bhangra', 'dhol', 't-series', 'tseries',
+  'zee music', 'sony music india', 'yrf', 'tips official', 'speed records',
+  'white hill', 'saregama', 'geet mp3', 'desire music', 'coke studio',
+  'arijit', 'neha kakkar', 'badshah', 'diljit', 'karan aujla', 'sidhu moose',
+  'b praak', 'jubin nautiyal', 'shreya ghoshal', 'pritam', 'atif aslam',
+  'honey singh', 'yo yo honey singh', 'darshan raval', 'vishal mishra', 'sachin-jigar',
+  'amit trivedi', 'a.r. rahman', 'ar rahman', 'anirudh', 'shilpa rao', 'jasleen royal',
+  'king', 'mc stan', 'divine', 'emiway', 'raftaar', 'ap dhillon', 'shubh',
+  'ammy virk', 'hardy sandhu', 'sunidhi chauhan', 'sonu nigam', 'alka yagnik',
+  'kumar sanu', 'udit narayan', 'kishore kumar', 'lata mangeshkar', 'jagjit singh',
+  'kk', 'armaan malik', 'amaal mallik', 'guru randhawa', 'seedhe maut',
+  'kr$na', 'krsna', 'talha anjum', 'young stunners', 'sukhe', 'jass manak',
+  'ishq', 'pyaar', 'dil', 'meri', 'tere', 'deewana', 'zindagi', 'akhiyan',
+  'sohne', 'jatt', 'pendu', 'gabru', 'gaana', 'geet', 'bad newz', 'brahmastra',
+  'devara', 'aashiqui', 'bhool bhulaiyaa', 'stree', 'animal', 'aujla', 'sidhu'
+];
+
+const INDIAN_ARTISTS = [
+  'arijit singh', 'arijit', 'neha kakkar', 'badshah', 'diljit dosanjh', 'diljit',
+  'karan aujla', 'sidhu moose wala', 'sidhu', 'b praak', 'jubin nautiyal',
+  'shreya ghoshal', 'pritam', 'atif aslam', 'honey singh', 'yo yo honey singh',
+  'darshan raval', 'vishal mishra', 'sachin-jigar', 'amit trivedi', 'a.r. rahman',
+  'ar rahman', 'anirudh ravichander', 'anirudh', 'shilpa rao', 'jasleen royal',
+  'king', 'mc stan', 'divine', 'emiway', 'raftaar', 'ap dhillon', 'shubh',
+  'ammy virk', 'hardy sandhu', 'sunidhi chauhan', 'sonu nigam', 'alka yagnik',
+  'kumar sanu', 'udit narayan', 'kishore kumar', 'lata mangeshkar', 'jagjit singh',
+  'kk', 'armaan malik', 'amaal mallik', 'guru randhawa', 'seedhe maut',
+  'kr$na', 'krsna', 'talha anjum', 'young stunners', 'sukhe', 'jass manak',
+  'jassie gill', 'parmish verma', 'jordan sandhu', 'nimrat khaira', 'sunanda sharma'
+];
+
+const KPOP_EXACT = ['k-pop', 'kpop', 'bts', 'blackpink', 'twice', 'stray kids', 'newjeans', 'aespa', 'ive', 'le sserafim', 'seventeen', 'exo', 'red velvet', 'nct', 'itzy', 'enhypen', 'jungkook', 'jung kook', 'jimin', 'taehyung', 'suga', 'j-hope', 'lisa', 'jennie', 'rose', 'jisoo', 'taeyeon', 'bigbang', 'ateez', 'got7', 'treasure', 'nmixx', 'illit', 'boynextdoor', 'riize', 'zerobaseone'];
+const KPOP_WORD_BOUNDARIES = /\b(v|rm|iu|txt)\b/i;
+
+const ANIME_KEYWORDS = [
+  'anime', 'jpop', 'j-pop', 'vocaloid', 'hatsune miku', 'yoasobi', 'kenshi yonezu',
+  'aimer', 'ado', 'eve', 'radwimps', 'king gnu', 'official hige dandism',
+  'ost anime', 'opening', 'ending', 'gurenge', 'unravel'
+];
+
+const LATIN_KEYWORDS = [
+  'reggaeton', 'bachata', 'cumbia', 'salsa', 'bad bunny', 'j balvin', 'ozuna',
+  'maluma', 'anuel', 'karol g', 'rosalia', 'daddy yankee', 'feid',
+  'rauw alejandro', 'peso pluma', 'shakira', 'enrique iglesias', 'luis fonsi',
+  'bizarrap', 'bzrp', 'quevedo'
+];
+
+const HIPHOP_KEYWORDS = [
+  'kendrick lamar', 'drake', 'travis scott', 'eminem', 'kanye west', '21 savage',
+  'metro boomin', 'future', 'lil baby', 'lil uzi', 'playboi carti', 'j. cole',
+  'j cole', 'juice wrld', 'xxxtentacion', 'post malone', 'doja cat', 'cardi b',
+  'nicki minaj', 'gunna', 'asap rocky', 'central cee'
+];
+
+function isRecordLabel(name = '') {
+  if (!name) return false;
+  const l = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  for (const label of RECORD_LABELS) {
+    const cl = label.replace(/[^a-z0-9]/g, '');
+    if (l.includes(cl) || cl.includes(l)) return true;
+  }
+  return false;
+}
+
 class MusicManager {
   constructor(client) {
     this.client = client;
@@ -34,6 +114,114 @@ class MusicManager {
 
   delete(guildId) {
     this.players.delete(guildId);
+  }
+
+  detectMusicProfile(title = '', artist = '') {
+    const text = ((title || '') + ' ' + (artist || '')).toLowerCase();
+
+    // 1. Regional Indian scripts
+    if (INDIAN_SCRIPTS_REGEX.test(text)) return 'indian';
+
+    // 2. Indian keywords or artists
+    for (const kw of INDIAN_KEYWORDS) {
+      if (text.includes(kw)) return 'indian';
+    }
+    for (const a of INDIAN_ARTISTS) {
+      if (text.includes(a)) return 'indian';
+    }
+
+    // 3. Korean / K-Pop
+    if (KOREAN_REGEX.test(text)) return 'kpop';
+    for (const kw of KPOP_EXACT) {
+      if (text.includes(kw)) return 'kpop';
+    }
+    if (KPOP_WORD_BOUNDARIES.test(text)) return 'kpop';
+
+    // 4. Japanese / Anime
+    if (JAPANESE_REGEX.test(text)) return 'anime';
+    for (const kw of ANIME_KEYWORDS) {
+      if (text.includes(kw)) return 'anime';
+    }
+
+    // 5. Latin
+    for (const kw of LATIN_KEYWORDS) {
+      if (text.includes(kw)) return 'latin';
+    }
+
+    // 6. Hip-Hop / Rap
+    for (const kw of HIPHOP_KEYWORDS) {
+      if (text.includes(kw)) return 'hiphop';
+    }
+
+    return 'western';
+  }
+
+  cleanTitle(rawTitle) {
+    if (!rawTitle) return '';
+    return rawTitle
+      .replace(/\(official\s*(music)?\s*(video|audio|lyrics?|visualizer|remaster|hd|4k)?\)/gi, '')
+      .replace(/\[official\s*(music)?\s*(video|audio|lyrics?|visualizer|remaster|hd|4k)?\]/gi, '')
+      .replace(/\((lyrics?|hd|4k|audio|remastered|remaster|visualizer)\)/gi, '')
+      .replace(/\[(lyrics?|hd|4k|audio|remastered|remaster|visualizer)\]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  extractCleanArtistAndTitle(track) {
+    const rawTitle = (track?.title || '').trim();
+    const rawArtist = (track?.artist || '').trim();
+    const clean = this.cleanTitle(rawTitle);
+    const lower = clean.toLowerCase();
+
+    const isLabel = isRecordLabel(rawArtist);
+
+    let detectedArtist = '';
+    for (const a of INDIAN_ARTISTS) {
+      if (lower.includes(a)) {
+        detectedArtist = a;
+        break;
+      }
+    }
+
+    let songName = '';
+    const pipeParts = clean.split('|').map(s => s.trim()).filter(Boolean);
+
+    if (pipeParts.length > 1) {
+      songName = pipeParts[0].split(' - ')[0].trim();
+      if (!detectedArtist) {
+        for (let i = 1; i < pipeParts.length; i++) {
+          const seg = pipeParts[i];
+          if (!isRecordLabel(seg) && !/official|video|4k|hd|lyrics/i.test(seg) && seg.length > 2 && seg.length < 35) {
+            detectedArtist = seg;
+            break;
+          }
+        }
+      }
+    } else if (clean.includes(' - ')) {
+      const parts = clean.split(' - ').map(s => s.trim());
+      if (detectedArtist) {
+        if (parts[0].toLowerCase().includes(detectedArtist)) {
+          songName = parts.slice(1).join(' - ');
+        } else {
+          songName = parts[0];
+        }
+      } else {
+        detectedArtist = parts[0];
+        songName = parts.slice(1).join(' - ');
+      }
+    } else {
+      songName = clean;
+    }
+
+    let finalArtist = detectedArtist;
+    if (!finalArtist && rawArtist && !isLabel && !['youtube', 'soundcloud', 'web audio'].includes(rawArtist.toLowerCase())) {
+      finalArtist = rawArtist;
+    }
+
+    return {
+      songName: songName || clean,
+      artist: finalArtist || ''
+    };
   }
 
   async resolveTrack(query, requestedBy) {
@@ -73,7 +261,11 @@ class MusicManager {
         if (validation && (validation.startsWith('sp_track') || validation === 'sp_track')) {
           const spData = await play.spotify(query);
           const searchQuery = `${spData.name} ${spData.artists?.[0]?.name || ''}`;
-          // Resolve stream via SoundCloud or search
+          const vibe = this.detectMusicProfile(searchQuery);
+          if (vibe === 'indian' || vibe === 'kpop' || vibe === 'anime') {
+            return await this.searchYouTube(searchQuery, requestedBy) ||
+                   await this.searchSoundCloud(searchQuery, requestedBy);
+          }
           return await this.searchSoundCloud(searchQuery, requestedBy) ||
                  await this.searchYouTube(searchQuery, requestedBy);
         }
@@ -99,12 +291,17 @@ class MusicManager {
       }
     }
 
-    // 2. Search query: Try SoundCloud first for reliable cloud/Render streaming
-    const scResult = await this.searchSoundCloud(query, requestedBy);
-    if (scResult) return scResult;
-
-    // 3. Fallback: Try YouTube search
-    return await this.searchYouTube(query, requestedBy);
+    // 2. Search query: Language/profile-aware search prioritizing authentic YouTube catalog for regional music
+    const vibe = this.detectMusicProfile(query, '');
+    if (vibe === 'indian' || vibe === 'kpop' || vibe === 'anime') {
+      const ytResult = await this.searchYouTube(query, requestedBy);
+      if (ytResult) return ytResult;
+      return await this.searchSoundCloud(query, requestedBy);
+    } else {
+      const scResult = await this.searchSoundCloud(query, requestedBy);
+      if (scResult) return scResult;
+      return await this.searchYouTube(query, requestedBy);
+    }
   }
 
   async searchSoundCloud(query, requestedBy) {
@@ -157,54 +354,75 @@ class MusicManager {
     return null;
   }
 
-  cleanTitle(rawTitle) {
-    if (!rawTitle) return '';
-    return rawTitle
-      .replace(/\(official\s*(music)?\s*(video|audio|lyrics?|visualizer|remaster|hd|4k)?\)/gi, '')
-      .replace(/\[official\s*(music)?\s*(video|audio|lyrics?|visualizer|remaster|hd|4k)?\]/gi, '')
-      .replace(/\((lyrics?|hd|4k|audio|remastered|remaster|visualizer)\)/gi, '')
-      .replace(/\[(lyrics?|hd|4k|audio|remastered|remaster|visualizer)\]/gi, '')
-      .replace(/\|.*$/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  async getAutoplayTrack(previousTrack, history = []) {
+  async getAutoplayTrack(previousTrack, history = [], targetVibe = null) {
     if (!previousTrack) return null;
 
-    const cleaned = this.cleanTitle(previousTrack.title || '');
-    let artist = previousTrack.artist || '';
-    if (['youtube', 'soundcloud', 'web audio'].includes(artist.toLowerCase())) {
-      artist = '';
-    }
-
-    let songName = cleaned;
-    if (cleaned.includes(' - ')) {
-      const parts = cleaned.split(' - ');
-      if (!artist) artist = parts[0].trim();
-      songName = parts.slice(1).join(' - ').trim();
-    } else if (cleaned.includes(' : ')) {
-      const parts = cleaned.split(' : ');
-      if (!artist) artist = parts[0].trim();
-      songName = parts.slice(1).join(' : ').trim();
-    }
+    const vibe = targetVibe || this.detectMusicProfile(previousTrack.title, previousTrack.artist);
+    const { songName, artist } = this.extractCleanArtistAndTitle(previousTrack);
 
     const historySet = new Set(history.map(h => (typeof h === 'string' ? h.toLowerCase() : '')));
     if (previousTrack.url) historySet.add(previousTrack.url.toLowerCase());
     if (previousTrack.title) historySet.add(this.cleanTitle(previousTrack.title).toLowerCase());
 
     const queries = [];
-    if (artist && songName && artist.toLowerCase() !== songName.toLowerCase()) {
-      queries.push({ q: `${artist} top songs audio`, source: 'youtube' });
-      queries.push({ q: `${artist} audio`, source: 'youtube' });
-      queries.push({ q: artist, source: 'soundcloud' });
-      queries.push({ q: `${songName} radio mix`, source: 'youtube' });
-    } else if (artist) {
-      queries.push({ q: `${artist} songs`, source: 'youtube' });
-      queries.push({ q: artist, source: 'soundcloud' });
+    if (vibe === 'indian') {
+      // Strictly YouTube-only for Indian songs to avoid SoundCloud English pop/EDM leak
+      if (artist) {
+        queries.push({ q: `${artist} hindi songs audio tracks`, source: 'youtube' });
+        queries.push({ q: `${artist} hits audio track`, source: 'youtube' });
+      }
+      if (songName && songName.length > 2) {
+        queries.push({ q: `${songName} hindi song audio`, source: 'youtube' });
+        queries.push({ q: `${songName} bollywood audio track`, source: 'youtube' });
+      }
+      queries.push({ q: 'latest bollywood hindi songs audio tracks', source: 'youtube' });
+      queries.push({ q: 'top punjabi songs audio tracks', source: 'youtube' });
+    } else if (vibe === 'kpop') {
+      if (artist) {
+        queries.push({ q: `${artist} kpop audio track`, source: 'youtube' });
+        queries.push({ q: `${artist} official audio`, source: 'youtube' });
+      }
+      if (songName) {
+        queries.push({ q: `${songName} kpop audio`, source: 'youtube' });
+      }
+      queries.push({ q: 'latest kpop songs audio track', source: 'youtube' });
+    } else if (vibe === 'anime') {
+      if (artist) {
+        queries.push({ q: `${artist} anime ost audio track`, source: 'youtube' });
+        queries.push({ q: `${artist} jpop audio track`, source: 'youtube' });
+      }
+      if (songName) {
+        queries.push({ q: `${songName} anime ost audio`, source: 'youtube' });
+      }
+      queries.push({ q: 'popular anime ost songs audio', source: 'youtube' });
+    } else if (vibe === 'latin') {
+      if (artist) {
+        queries.push({ q: `${artist} reggaeton cancion audio`, source: 'youtube' });
+        queries.push({ q: `${artist} latin hits audio track`, source: 'youtube' });
+      }
+      if (songName) {
+        queries.push({ q: `${songName} reggaeton audio`, source: 'youtube' });
+      }
+      queries.push({ q: 'top latin reggaeton songs audio tracks', source: 'youtube' });
+    } else if (vibe === 'hiphop') {
+      if (artist) {
+        queries.push({ q: `${artist} hip hop audio track`, source: 'youtube' });
+        queries.push({ q: `${artist} rap songs audio`, source: 'youtube' });
+      }
+      if (songName) {
+        queries.push({ q: `${songName} rap audio track`, source: 'youtube' });
+      }
+      queries.push({ q: 'top hip hop rap tracks audio', source: 'youtube' });
     } else {
-      queries.push({ q: `${cleaned} music`, source: 'youtube' });
-      queries.push({ q: cleaned, source: 'soundcloud' });
+      // Western / Pop
+      if (artist) {
+        queries.push({ q: `${artist} songs official audio`, source: 'youtube' });
+        queries.push({ q: `${artist} hit songs audio track`, source: 'youtube' });
+      }
+      if (songName) {
+        queries.push({ q: `${songName} radio mix audio`, source: 'youtube' });
+      }
+      queries.push({ q: 'top pop hits official audio', source: 'youtube' });
     }
 
     const candidates = [];
@@ -215,11 +433,26 @@ class MusicManager {
           const results = await play.search(item.q, { limit: 8, source: { youtube: 'video' } });
           for (const res of results) {
             const dur = res.durationInSec || 0;
-            if (dur < 45 || dur > 720) continue;
-            const urlLower = res.url.toLowerCase();
-            const titleClean = this.cleanTitle(res.title || '').toLowerCase();
+            if (dur < 45 || dur > 720) continue; // between 45s and 12 mins
+
+            const title = res.title || '';
+            const titleClean = this.cleanTitle(title).toLowerCase();
+            const urlLower = (res.url || '').toLowerCase();
+
+            // Filter out playlists, compilations, jukeboxes
+            if (/jukebox|full album|mashup 1 hour|compilation|non stop|all songs/i.test(title)) continue;
+
             if (historySet.has(urlLower) || historySet.has(titleClean)) continue;
-            if (songName.length > 3 && titleClean.includes(songName.toLowerCase())) continue;
+            if (songName && songName.length > 3 && titleClean.includes(songName.toLowerCase())) continue;
+
+            // STRICT GENRE / VIBE VALIDATION
+            const candVibe = this.detectMusicProfile(title, res.channel?.name || '');
+            if (vibe === 'indian' && candVibe !== 'indian') continue;
+            if (vibe === 'kpop' && candVibe !== 'kpop') continue;
+            if (vibe === 'anime' && candVibe !== 'anime') continue;
+            if (vibe === 'latin' && candVibe !== 'latin') continue;
+            if (vibe === 'hiphop' && candVibe !== 'hiphop' && candVibe !== 'western') continue;
+            if (vibe === 'western' && (candVibe === 'indian' || candVibe === 'kpop' || candVibe === 'anime')) continue;
 
             candidates.push({
               title: res.title,
@@ -227,26 +460,8 @@ class MusicManager {
               artist: res.channel?.name || artist || 'YouTube',
               duration: dur,
               thumbnail: res.thumbnails?.[0]?.url || null,
-              source: 'youtube'
-            });
-          }
-        } else if (item.source === 'soundcloud') {
-          const results = await play.search(item.q, { limit: 8, source: { soundcloud: 'tracks' } });
-          for (const res of results) {
-            const dur = Math.floor((res.durationInMs || 0) / 1000);
-            if (dur < 45 || dur > 720) continue;
-            const urlLower = (res.url || '').toLowerCase();
-            const titleClean = this.cleanTitle(res.name || '').toLowerCase();
-            if (historySet.has(urlLower) || historySet.has(titleClean)) continue;
-            if (songName.length > 3 && titleClean.includes(songName.toLowerCase())) continue;
-
-            candidates.push({
-              title: res.name,
-              url: res.url,
-              artist: res.user?.name || artist || 'SoundCloud',
-              duration: dur,
-              thumbnail: res.thumbnail || null,
-              source: 'soundcloud'
+              source: 'youtube',
+              vibe
             });
           }
         }
@@ -257,7 +472,7 @@ class MusicManager {
     }
 
     if (candidates.length === 0) return null;
-    const pool = candidates.slice(0, Math.min(3, candidates.length));
+    const pool = candidates.slice(0, Math.min(4, candidates.length));
     const chosen = pool[Math.floor(Math.random() * pool.length)];
 
     return {
@@ -268,6 +483,7 @@ class MusicManager {
         displayAvatarURL: () => 'https://cdn.discordapp.com/emojis/852899478148841482.webp'
       },
       isAutoplay: true,
+      vibe,
       basedOn: previousTrack.title
     };
   }
