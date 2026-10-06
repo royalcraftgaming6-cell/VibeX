@@ -13,11 +13,11 @@ module.exports = {
     .setDescription('Skips the currently playing track.'),
   async execute(ctx) {
     const player = ctx.manager.getPlayer(ctx.guild);
-    if (!player || !player.currentTrack) {
+    if (!player || (!player.currentTrack && player.queue.isEmpty() && !player.autoplay)) {
       return ctx.sendError('There is nothing currently playing to skip.');
     }
 
-    const skippedTitle = player.currentTrack.title;
+    const skippedTitle = player.currentTrack ? player.currentTrack.title : (player.previousTrack ? player.previousTrack.title : 'Current Track');
     player.skip();
     return ctx.reply({ embeds: [successEmbed(`Skipped **${skippedTitle}**`)] });
   }

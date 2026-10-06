@@ -11,65 +11,20 @@ const RECORD_LABELS = new Set([
 ]);
 
 const INDIAN_SCRIPTS_REGEX = /[\u0900-\u097F\u0A00-\u0A7F\u0980-\u09FF\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F\u0A80-\u0AFF\u0600-\u06FF]/;
-const KOREAN_REGEX = /[\uAC00-\uD7AF\u1100-\u11FF]/;
-const JAPANESE_REGEX = /[\u3040-\u309F\u30A0-\u30FF]/;
+const KOREAN_SCRIPTS_REGEX = /[\uAC00-\uD7AF\u1100-\u11FF]/;
+const JAPANESE_SCRIPTS_REGEX = /[\u3040-\u309F\u30A0-\u30FF]/;
 
-const INDIAN_KEYWORDS = [
-  'hindi', 'bollywood', 'punjabi', 'bhojpuri', 'haryanvi', 'tamil', 'telugu',
-  'malayalam', 'kannada', 'marathi', 'bengali', 'gujarati', 'sufi', 'ghazal',
-  'qawwali', 'bhajan', 'kirtan', 'desi', 'bhangra', 'dhol', 't-series', 'tseries',
-  'zee music', 'sony music india', 'yrf', 'tips official', 'speed records',
-  'white hill', 'saregama', 'geet mp3', 'desire music', 'coke studio',
-  'arijit', 'neha kakkar', 'badshah', 'diljit', 'karan aujla', 'sidhu moose',
-  'b praak', 'jubin nautiyal', 'shreya ghoshal', 'pritam', 'atif aslam',
-  'honey singh', 'yo yo honey singh', 'darshan raval', 'vishal mishra', 'sachin-jigar',
-  'amit trivedi', 'a.r. rahman', 'ar rahman', 'anirudh', 'shilpa rao', 'jasleen royal',
-  'king', 'mc stan', 'divine', 'emiway', 'raftaar', 'ap dhillon', 'shubh',
-  'ammy virk', 'hardy sandhu', 'sunidhi chauhan', 'sonu nigam', 'alka yagnik',
-  'kumar sanu', 'udit narayan', 'kishore kumar', 'lata mangeshkar', 'jagjit singh',
-  'kk', 'armaan malik', 'amaal mallik', 'guru randhawa', 'seedhe maut',
-  'kr$na', 'krsna', 'talha anjum', 'young stunners', 'sukhe', 'jass manak',
-  'ishq', 'pyaar', 'dil', 'meri', 'tere', 'deewana', 'zindagi', 'akhiyan',
-  'sohne', 'jatt', 'pendu', 'gabru', 'gaana', 'geet', 'bad newz', 'brahmastra',
-  'devara', 'aashiqui', 'bhool bhulaiyaa', 'stree', 'animal', 'aujla', 'sidhu'
-];
+const INDIAN_WORDS_REGEX = /\b(k\.?k\.?|zara|jannat|emraan|hashmi|hindi|bollywood|punjabi|bhojpuri|haryanvi|tamil|telugu|malayalam|kannada|marathi|bengali|gujarati|sufi|ghazal|qawwali|bhajan|kirtan|desi|bhangra|dhol|arijit|arijit singh|neha kakkar|badshah|diljit|diljit dosanjh|karan aujla|sidhu|sidhu moose wala|b praak|jubin|jubin nautiyal|shreya|shreya ghoshal|pritam|atif|atif aslam|honey singh|yo yo honey singh|darshan|darshan raval|vishal|vishal mishra|sachin|jigar|sachin-jigar|rahman|a\.?r\.?\s*rahman|anirudh|anirudh ravichander|shilpa rao|king|divine|emiway|raftaar|ap dhillon|shubh|ammy|ammy virk|hardy|hardy sandhu|harrdy sandhu|sunidhi|sunidhi chauhan|sonu nigam|alka|alka yagnik|kumar sanu|udit|udit narayan|kishore|kishore kumar|lata|lata mangeshkar|rafi|mohammad rafi|mukesh|jagjit|jagjit singh|kk|armaan|armaan malik|amaal|amaal mallik|guru randhawa|ishq|pyaar|pyar|dil|meri|tere|tera|teri|deewana|dewana|zindagi|akhiyan|sohne|sohna|jatt|munda|kudi|gaana|geet|gana|bad newz|brahmastra|devara|aashiqui|bhool bhulaiyaa|stree|animal|dunki|jawan|pathaan|tiger|kabir singh|rockstar|tamasha|kesariya|tauba|chuttamalle|dhurandhar|lofi hindi|hindi lofi|slowed hindi|hindi slowed|himesh|himesh reshammiya|shaan|mohit chauhan|ankit tiwari|mika|mika singh|lucky ali|javed ali|ali zafar|mithoon|shekhar|atul|wajid|anand|milind|nadeem|shravan|jatin|lalit|kavita|anuradha|sadhana|talat|pankaj udhas|harshdeep|rekha bhardwaj|neeti mohan|shalmali|jonita|jonita gandhi|monali|monali thakur|antara|antara mitra|dhvani|dhvani bhanushali|tulsi|tulsi kumar|palak muchhal|kanika|kanika kapoor|seedhe maut|krsna|kr\$na|talha anjum|young stunners|sukhe|jass manak|parmish verma|jordan sandhu|nimrat khaira|sunanda sharma|t-series|tseries|zee music|sony music india|yrf|tips official|speed records|white hill|saregama|geet mp3|desire music|coke studio)\b/i;
 
-const INDIAN_ARTISTS = [
-  'arijit singh', 'arijit', 'neha kakkar', 'badshah', 'diljit dosanjh', 'diljit',
-  'karan aujla', 'sidhu moose wala', 'sidhu', 'b praak', 'jubin nautiyal',
-  'shreya ghoshal', 'pritam', 'atif aslam', 'honey singh', 'yo yo honey singh',
-  'darshan raval', 'vishal mishra', 'sachin-jigar', 'amit trivedi', 'a.r. rahman',
-  'ar rahman', 'anirudh ravichander', 'anirudh', 'shilpa rao', 'jasleen royal',
-  'king', 'mc stan', 'divine', 'emiway', 'raftaar', 'ap dhillon', 'shubh',
-  'ammy virk', 'hardy sandhu', 'sunidhi chauhan', 'sonu nigam', 'alka yagnik',
-  'kumar sanu', 'udit narayan', 'kishore kumar', 'lata mangeshkar', 'jagjit singh',
-  'kk', 'armaan malik', 'amaal mallik', 'guru randhawa', 'seedhe maut',
-  'kr$na', 'krsna', 'talha anjum', 'young stunners', 'sukhe', 'jass manak',
-  'jassie gill', 'parmish verma', 'jordan sandhu', 'nimrat khaira', 'sunanda sharma'
-];
+const INDIAN_SINGERS_REGEX = /\b(k\.?k\.?|kk|arijit|arijit singh|neha kakkar|badshah|diljit|diljit dosanjh|karan aujla|sidhu|b praak|jubin|shreya|pritam|atif|honey singh|darshan|vishal|sachin|jigar|rahman|anirudh|shilpa rao|king|divine|emiway|raftaar|ap dhillon|shubh|ammy|hardy|sunidhi|sonu nigam|alka|kumar sanu|udit|kishore|lata|rafi|mukesh|jagjit|armaan|amaal|guru randhawa|himesh|shaan|mohit chauhan|mika|lucky ali|javed ali|ali zafar|mithoon|neeti mohan|jonita|monali|tulsi kumar|dhvani|palak muchhal)\b/i;
 
-const KPOP_EXACT = ['k-pop', 'kpop', 'bts', 'blackpink', 'twice', 'stray kids', 'newjeans', 'aespa', 'ive', 'le sserafim', 'seventeen', 'exo', 'red velvet', 'nct', 'itzy', 'enhypen', 'jungkook', 'jung kook', 'jimin', 'taehyung', 'suga', 'j-hope', 'lisa', 'jennie', 'rose', 'jisoo', 'taeyeon', 'bigbang', 'ateez', 'got7', 'treasure', 'nmixx', 'illit', 'boynextdoor', 'riize', 'zerobaseone'];
-const KPOP_WORD_BOUNDARIES = /\b(v|rm|iu|txt)\b/i;
+const ANIME_WORDS_REGEX = /\b(anime|jpop|j-pop|vocaloid|hatsune miku|yoasobi|kenshi yonezu|aimer|ado|radwimps|king gnu|official hige dandism|ost anime|opening|ending|gurenge|unravel|eve)\b/i;
 
-const ANIME_KEYWORDS = [
-  'anime', 'jpop', 'j-pop', 'vocaloid', 'hatsune miku', 'yoasobi', 'kenshi yonezu',
-  'aimer', 'ado', 'eve', 'radwimps', 'king gnu', 'official hige dandism',
-  'ost anime', 'opening', 'ending', 'gurenge', 'unravel'
-];
+const KPOP_WORDS_REGEX = /\b(k-pop|kpop|bts|blackpink|twice|stray kids|newjeans|aespa|ive|le sserafim|seventeen|exo|red velvet|nct|itzy|enhypen|jungkook|jung kook|jimin|taehyung|suga|j-hope|lisa|jennie|rose|jisoo|taeyeon|bigbang|ateez|got7|treasure|nmixx|illit|boynextdoor|riize|zerobaseone|v|rm|iu|txt)\b/i;
 
-const LATIN_KEYWORDS = [
-  'reggaeton', 'bachata', 'cumbia', 'salsa', 'bad bunny', 'j balvin', 'ozuna',
-  'maluma', 'anuel', 'karol g', 'rosalia', 'daddy yankee', 'feid',
-  'rauw alejandro', 'peso pluma', 'shakira', 'enrique iglesias', 'luis fonsi',
-  'bizarrap', 'bzrp', 'quevedo'
-];
+const LATIN_WORDS_REGEX = /\b(reggaeton|bachata|cumbia|salsa|bad bunny|j balvin|ozuna|maluma|anuel|karol g|rosalia|daddy yankee|feid|rauw alejandro|peso pluma|shakira|enrique iglesias|luis fonsi|bizarrap|bzrp|quevedo)\b/i;
 
-const HIPHOP_KEYWORDS = [
-  'kendrick lamar', 'drake', 'travis scott', 'eminem', 'kanye west', '21 savage',
-  'metro boomin', 'future', 'lil baby', 'lil uzi', 'playboi carti', 'j. cole',
-  'j cole', 'juice wrld', 'xxxtentacion', 'post malone', 'doja cat', 'cardi b',
-  'nicki minaj', 'gunna', 'asap rocky', 'central cee'
-];
+const HIPHOP_WORDS_REGEX = /\b(kendrick lamar|drake|travis scott|eminem|kanye west|21 savage|metro boomin|future|lil baby|lil uzi|playboi carti|j\.?\s*cole|juice wrld|xxxtentacion|post malone|doja cat|cardi b|nicki minaj|gunna|asap rocky|central cee)\b/i;
 
 function isRecordLabel(name = '') {
   if (!name) return false;
@@ -119,39 +74,23 @@ class MusicManager {
   detectMusicProfile(title = '', artist = '') {
     const text = ((title || '') + ' ' + (artist || '')).toLowerCase();
 
-    // 1. Regional Indian scripts
+    // 1. Regional Indian scripts or words
     if (INDIAN_SCRIPTS_REGEX.test(text)) return 'indian';
+    if (INDIAN_WORDS_REGEX.test(text)) return 'indian';
 
-    // 2. Indian keywords or artists
-    for (const kw of INDIAN_KEYWORDS) {
-      if (text.includes(kw)) return 'indian';
-    }
-    for (const a of INDIAN_ARTISTS) {
-      if (text.includes(a)) return 'indian';
-    }
+    // 2. Korean / K-Pop
+    if (KOREAN_SCRIPTS_REGEX.test(text)) return 'kpop';
+    if (KPOP_WORDS_REGEX.test(text)) return 'kpop';
 
-    // 3. Korean / K-Pop
-    if (KOREAN_REGEX.test(text)) return 'kpop';
-    for (const kw of KPOP_EXACT) {
-      if (text.includes(kw)) return 'kpop';
-    }
-    if (KPOP_WORD_BOUNDARIES.test(text)) return 'kpop';
+    // 3. Japanese / Anime
+    if (JAPANESE_SCRIPTS_REGEX.test(text)) return 'anime';
+    if (ANIME_WORDS_REGEX.test(text)) return 'anime';
 
-    // 4. Japanese / Anime
-    if (JAPANESE_REGEX.test(text)) return 'anime';
-    for (const kw of ANIME_KEYWORDS) {
-      if (text.includes(kw)) return 'anime';
-    }
+    // 4. Latin
+    if (LATIN_WORDS_REGEX.test(text)) return 'latin';
 
-    // 5. Latin
-    for (const kw of LATIN_KEYWORDS) {
-      if (text.includes(kw)) return 'latin';
-    }
-
-    // 6. Hip-Hop / Rap
-    for (const kw of HIPHOP_KEYWORDS) {
-      if (text.includes(kw)) return 'hiphop';
-    }
+    // 5. Hip-Hop / Rap
+    if (HIPHOP_WORDS_REGEX.test(text)) return 'hiphop';
 
     return 'western';
   }
@@ -171,44 +110,28 @@ class MusicManager {
     const rawTitle = (track?.title || '').trim();
     const rawArtist = (track?.artist || '').trim();
     const clean = this.cleanTitle(rawTitle);
-    const lower = clean.toLowerCase();
 
     const isLabel = isRecordLabel(rawArtist);
 
     let detectedArtist = '';
-    for (const a of INDIAN_ARTISTS) {
-      if (lower.includes(a)) {
-        detectedArtist = a;
-        break;
-      }
-    }
-
     let songName = '';
     const pipeParts = clean.split('|').map(s => s.trim()).filter(Boolean);
 
     if (pipeParts.length > 1) {
       songName = pipeParts[0].split(' - ')[0].trim();
-      if (!detectedArtist) {
-        for (let i = 1; i < pipeParts.length; i++) {
-          const seg = pipeParts[i];
-          if (!isRecordLabel(seg) && !/official|video|4k|hd|lyrics/i.test(seg) && seg.length > 2 && seg.length < 35) {
-            detectedArtist = seg;
-            break;
-          }
+      for (let i = 1; i < pipeParts.length; i++) {
+        const seg = pipeParts[i];
+        if (isRecordLabel(seg) || /official|video|4k|hd|lyrics|audio|visualizer/i.test(seg) || seg.length < 2 || seg.length > 35) continue;
+        if (INDIAN_SINGERS_REGEX.test(seg)) {
+          detectedArtist = seg;
+          break;
         }
+        if (!detectedArtist) detectedArtist = seg;
       }
     } else if (clean.includes(' - ')) {
       const parts = clean.split(' - ').map(s => s.trim());
-      if (detectedArtist) {
-        if (parts[0].toLowerCase().includes(detectedArtist)) {
-          songName = parts.slice(1).join(' - ');
-        } else {
-          songName = parts[0];
-        }
-      } else {
-        detectedArtist = parts[0];
-        songName = parts.slice(1).join(' - ');
-      }
+      detectedArtist = parts[0];
+      songName = parts.slice(1).join(' - ');
     } else {
       songName = clean;
     }

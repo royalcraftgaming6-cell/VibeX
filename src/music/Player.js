@@ -175,8 +175,9 @@ class Player {
     } catch (err) {
       console.error('Error starting track playback:', err);
       if (this.textChannel) {
-        this.textChannel.send({ embeds: [errorEmbed(`Could not play track: **${this.currentTrack.title}** (${err.message})`)] }).catch(() => {});
+        this.textChannel.send({ embeds: [errorEmbed(`Could not play track: **${this.currentTrack ? this.currentTrack.title : 'Selected track'}** (${err.message})`)] }).catch(() => {});
       }
+      this.isFetchingAutoplay = false;
       this.handleSongEnd();
     }
   }
@@ -246,11 +247,6 @@ class Player {
     this.isFetchingAutoplay = true;
 
     try {
-      if (this.nowPlayingMessage) {
-        this.nowPlayingMessage.edit({ components: [] }).catch(() => {});
-        this.nowPlayingMessage = null;
-      }
-
       const targetVibe = this.sessionVibe || this.manager.detectMusicProfile(referenceTrack.title, referenceTrack.artist);
       const vibeTag = targetVibe ? targetVibe.charAt(0).toUpperCase() + targetVibe.slice(1) : 'Similar';
 
@@ -298,18 +294,26 @@ class Player {
   }
 
   handleQueueEmpty() {
+    this.currentTrack = null;
+    this.isFetchingAutoplay = false;
     const settings = db.getSettings(this.guild.id);
 
     // Keep control panel active with buttons ready
-    if (this.nowPlayingMessage) {
-      const components = createPlayerButtons(this);
-      const embed = new EmbedBuilder()
-        .setColor(config.colors.primary)
-        .setTitle('🎵 VibeX — Control Panel (24/7 Active)')
-        .setDescription(`Queue finished. The bot is staying connected in voice 24/7!\nUse the buttons below or \`/play <song>\` to play more music.\n\n📻 **Autoplay:** ${this.autoplay ? 'Enabled ✅ (Ready)' : 'Disabled ❌'}`)
-        .setFooter({ text: '24/7 Continuous Mode Active • Developed by WIZARD OG' });
+    const components = createPlayerButtons(this);
+    const embed = new EmbedBuilder()
+      .setColor(config.colors.primary)
+      .setTitle('🎵 VibeX — Control Panel (24/7 Active)')
+      .setDescription(`Queue finished. The bot is staying connected in voice 24/7!\nUse the buttons below or \`/play <song>\` to play more music.\n\n📻 **Autoplay:** ${this.autoplay ? 'Enabled ✅ (Ready)' : 'Disabled ❌'}`)
+      .setFooter({ text: '24/7 Continuous Mode Active • Developed by WIZARD OG' });
 
-      this.nowPlayingMessage.edit({ embeds: [embed], components }).catch(() => {});
+    if (this.nowPlayingMessage) {
+      this.nowPlayingMessage.edit({ embeds: [embed], components }).catch(() => {
+        if (this.textChannel) {
+          this.textChannel.send({ embeds: [embed], components }).then(m => { this.nowPlayingMessage = m; }).catch(() => {});
+        }
+      });
+    } else if (this.textChannel) {
+      this.textChannel.send({ embeds: [embed], components }).then(m => { this.nowPlayingMessage = m; }).catch(() => {});
     }
 
     if (!settings.twenty_four_seven) {
@@ -358,7 +362,10 @@ class Player {
   }
 
   skip() {
-    this.audioPlayer.stop(); // Triggers AudioPlayerStatus.Idle -> handleSongEnd
+    this.isFetchingAutoplay = false;
+    if (this.audioPlayer) {
+      this.audioPlayer.stop(); // Triggers AudioPlayerStatus.Idle -> handleSongEnd
+    }
     return true;
   }
 

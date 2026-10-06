@@ -112,10 +112,10 @@ module.exports = {
           break;
 
         case 'music_skip':
-          if (!player.currentTrack) {
+          if (!player.currentTrack && player.queue.isEmpty() && !player.autoplay) {
             return interaction.reply({ embeds: [errorEmbed('Nothing to skip.')], ephemeral: true });
           }
-          const skipped = player.currentTrack.title;
+          const skipped = player.currentTrack ? player.currentTrack.title : (player.previousTrack ? player.previousTrack.title : 'Current Track');
           player.skip();
           await interaction.reply({ embeds: [successEmbed(`Skipped **${skipped}**`)], ephemeral: true });
           break;

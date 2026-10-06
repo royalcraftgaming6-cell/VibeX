@@ -55,6 +55,8 @@ module.exports = {
     // If a track is already playing, add to queue
     if (player.currentTrack) {
       player.queue.add(track);
+      const userTrackVibe = ctx.manager.detectMusicProfile(track.title, track.artist);
+      player.sessionVibe = userTrackVibe;
       return ctx.reply({
         embeds: [
           successEmbed(`Added **[${track.title}](${track.url})** to queue (Position: **#${player.queue.size()}**) • \`${formatDuration(track.duration)}\``)
