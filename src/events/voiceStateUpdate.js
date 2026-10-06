@@ -40,5 +40,13 @@ module.exports = {
         }
       }
     }
+
+    // 3. Check if a human user joined or returned to the bot's channel
+    if (newState.channelId === botChannelId && oldState.channelId !== botChannelId && !newState.member?.user?.bot) {
+      const player = client.musicManager.getPlayer(guild);
+      if (player && player.currentTrack) {
+        player.resyncStream();
+      }
+    }
   }
 };

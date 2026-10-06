@@ -145,7 +145,9 @@ class Player {
 
     try {
       this.currentResource = await this.createAudioResourceForTrack(this.currentTrack);
-      this.currentResource.volume.setVolume(this.volume / 100);
+      if (this.currentResource.volume) {
+        this.currentResource.volume.setVolume(this.volume / 100);
+      }
 
       this.audioPlayer.play(this.currentResource);
       this.isPaused = false;
@@ -166,15 +168,14 @@ class Player {
 
     // 1. Direct audio file URL (.mp3, .ogg, .wav, or raw audio link)
     if (track.url && (track.url.endsWith('.mp3') || track.url.endsWith('.ogg') || track.url.endsWith('.wav') || track.isDirect)) {
-      return createAudioResource(track.url, { inlineVolume: true });
+      return createAudioResource(track.url);
     }
 
     // 2. Direct SoundCloud track
     if (track.url && (track.url.includes('soundcloud.com') || track.source === 'soundcloud')) {
       const streamInfo = await play.stream(track.url);
       return createAudioResource(streamInfo.stream, {
-        inputType: streamInfo.type,
-        inlineVolume: true
+        inputType: streamInfo.type
       });
     }
 
@@ -199,8 +200,7 @@ class Player {
           console.log(`[Player] Streaming audio from SoundCloud: "${match.name || match.title}" for "${track.title}"`);
           const streamInfo = await play.stream(match.url);
           return createAudioResource(streamInfo.stream, {
-            inputType: streamInfo.type,
-            inlineVolume: true
+            inputType: streamInfo.type
           });
         }
       } catch (scErr) {
@@ -212,12 +212,24 @@ class Player {
     if (track.url) {
       const streamInfo = await play.stream(track.url);
       return createAudioResource(streamInfo.stream, {
-        inputType: streamInfo.type,
-        inlineVolume: true
+        inputType: streamInfo.type
       });
     }
 
     throw new Error('Unable to find a playable audio stream for this track.');
+  }
+
+  resyncStream() {
+    if (!this.audioPlayer || this.isPaused) return;
+    if (this.audioPlayer.state.status === AudioPlayerStatus.Playing) {
+      console.log(`[Player - Guild ${this.guild.id}] Rejoin detected: performing 150ms stream resync to clear Discord WebRTC jitter backlog.`);
+      this.audioPlayer.pause();
+      setTimeout(() => {
+        if (this.audioPlayer && this.audioPlayer.state.status === AudioPlayerStatus.Paused && !this.isPaused) {
+          this.audioPlayer.unpause();
+        }
+      }, 150);
+    }
   }
 
   async sendNowPlaying() {
