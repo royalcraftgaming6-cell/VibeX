@@ -63,7 +63,9 @@ module.exports = {
           embeds: [errorEmbed('An unexpected error occurred while executing this command.')],
           ephemeral: true
         };
-        if (interaction.replied || interaction.deferred) {
+        if (interaction.deferred) {
+          await interaction.editReply(errorPayload).catch(() => {});
+        } else if (interaction.replied) {
           await interaction.followUp(errorPayload).catch(() => {});
         } else {
           await interaction.reply(errorPayload).catch(() => {});
@@ -92,85 +94,95 @@ module.exports = {
         });
       }
 
-      switch (customId) {
-        case 'music_pause_resume':
-          if (player.isPaused) {
-            player.resume();
-            await interaction.reply({ embeds: [successEmbed('Resumed playback.')], ephemeral: true });
-          } else if (player.currentTrack) {
-            player.pause();
-            await interaction.reply({ embeds: [successEmbed('Paused playback.')], ephemeral: true });
-          } else if (player.previousTrack) {
-            await player.play(player.previousTrack);
-            await interaction.reply({ embeds: [successEmbed(`Playing **${player.previousTrack.title}**`)], ephemeral: true });
-          } else if (!player.queue.isEmpty()) {
-            await player.play(player.queue.next());
-            await interaction.reply({ embeds: [successEmbed('Started playback from queue.')], ephemeral: true });
-          } else {
-            await interaction.reply({ embeds: [errorEmbed('Queue is empty. Use `/play <song>` to play music!')], ephemeral: true });
-          }
-          break;
+      try {
+        switch (customId) {
+          case 'music_pause_resume':
+            if (player.isPaused) {
+              player.resume();
+              await interaction.reply({ embeds: [successEmbed('Resumed playback.')], ephemeral: true });
+            } else if (player.currentTrack) {
+              player.pause();
+              await interaction.reply({ embeds: [successEmbed('Paused playback.')], ephemeral: true });
+            } else if (player.previousTrack) {
+              await interaction.reply({ embeds: [successEmbed(`Playing **${player.previousTrack.title}**`)], ephemeral: true });
+              player.play(player.previousTrack).catch(() => {});
+            } else if (!player.queue.isEmpty()) {
+              const next = player.queue.next();
+              await interaction.reply({ embeds: [successEmbed(`Started playback from queue: **${next.title}**`)], ephemeral: true });
+              player.play(next).catch(() => {});
+            } else {
+              await interaction.reply({ embeds: [errorEmbed('Queue is empty. Use `/play <song>` to play music!')], ephemeral: true });
+            }
+            break;
 
-        case 'music_skip':
-          if (!player.currentTrack && player.queue.isEmpty() && !player.autoplay) {
-            return interaction.reply({ embeds: [errorEmbed('Nothing to skip.')], ephemeral: true });
-          }
-          const skipped = player.currentTrack ? player.currentTrack.title : (player.previousTrack ? player.previousTrack.title : 'Current Track');
-          player.skip();
-          await interaction.reply({ embeds: [successEmbed(`Skipped **${skipped}**`)], ephemeral: true });
-          break;
+          case 'music_skip':
+            if (!player.currentTrack && player.queue.isEmpty() && !player.autoplay) {
+              return interaction.reply({ embeds: [errorEmbed('Nothing to skip.')], ephemeral: true });
+            }
+            const skipped = player.currentTrack ? player.currentTrack.title : (player.previousTrack ? player.previousTrack.title : 'Current Track');
+            player.skip();
+            await interaction.reply({ embeds: [successEmbed(`Skipped **${skipped}**`)], ephemeral: true });
+            break;
 
-        case 'music_stop':
-          player.stop();
-          await interaction.reply({ embeds: [successEmbed('Playback stopped and queue cleared. Bot is staying connected 24/7.')], ephemeral: true });
-          break;
+          case 'music_stop':
+            player.stop();
+            await interaction.reply({ embeds: [successEmbed('Playback stopped and queue cleared. Bot is staying connected 24/7.')], ephemeral: true });
+            break;
 
-        case 'music_loop':
-          const nextLoop = (player.loopMode + 1) % 3;
-          player.setLoop(nextLoop);
-          const loopNames = ['Disabled ❌', 'Current Track 🔂', 'Entire Queue 🔁'];
-          await interaction.reply({ embeds: [successEmbed(`Loop set to: **${loopNames[nextLoop]}**`)], ephemeral: true });
-          break;
+          case 'music_loop':
+            const nextLoop = (player.loopMode + 1) % 3;
+            player.setLoop(nextLoop);
+            const loopNames = ['Disabled ❌', 'Current Track 🔂', 'Entire Queue 🔁'];
+            await interaction.reply({ embeds: [successEmbed(`Loop set to: **${loopNames[nextLoop]}**`)], ephemeral: true });
+            break;
 
-        case 'music_shuffle':
-          if (player.queue.size() < 2) {
-            return interaction.reply({ embeds: [errorEmbed('Need at least 2 tracks in queue to shuffle.')], ephemeral: true });
-          }
-          player.shuffle();
-          await interaction.reply({ embeds: [successEmbed(`Shuffled **${player.queue.size()}** tracks in queue.`)], ephemeral: true });
-          break;
+          case 'music_shuffle':
+            if (player.queue.size() < 2) {
+              return interaction.reply({ embeds: [errorEmbed('Need at least 2 tracks in queue to shuffle.')], ephemeral: true });
+            }
+            player.shuffle();
+            await interaction.reply({ embeds: [successEmbed(`Shuffled **${player.queue.size()}** tracks in queue.`)], ephemeral: true });
+            break;
 
-        case 'music_autoplay':
-          const newAutoplay = !player.autoplay;
-          player.setAutoplay(newAutoplay);
-          await interaction.reply({
-            embeds: [
-              successEmbed(`Autoplay is now **${newAutoplay ? 'ENABLED 📻' : 'DISABLED ❌'}**.\n${newAutoplay ? 'Similar songs will play automatically when the queue ends (Rythm style).' : 'Playback will stop when the queue ends.'}`)
-            ],
-            ephemeral: true
-          });
-          break;
+          case 'music_autoplay':
+            const newAutoplay = !player.autoplay;
+            player.setAutoplay(newAutoplay);
+            await interaction.reply({
+              embeds: [
+                successEmbed(`Autoplay is now **${newAutoplay ? 'ENABLED 📻' : 'DISABLED ❌'}**.\n${newAutoplay ? 'Similar songs will play automatically when the queue ends (Rythm style).' : 'Playback will stop when the queue ends.'}`)
+              ],
+              ephemeral: true
+            });
+            break;
 
-        case 'music_queue':
-          const queueTracks = player.queue.getAll();
-          if (queueTracks.length === 0 && !player.currentTrack) {
-            return interaction.reply({ embeds: [errorEmbed('The music queue is currently empty.')], ephemeral: true });
-          }
-          const queueBatch = queueTracks.slice(0, 10);
-          const queueList = queueBatch.map((track, i) => `\`${i + 1}.\` [${track.title}](${track.url})`).join('\n');
-          await interaction.reply({
-            embeds: [
-              successEmbed(
-                `**Now Playing:** [${player.currentTrack?.title || 'None'}](${player.currentTrack?.url || ''})\n\n**Upcoming (Total: ${queueTracks.length}):**\n${queueList || 'No more upcoming songs.'}`
-              )
-            ],
-            ephemeral: true
-          });
-          break;
+          case 'music_queue':
+            const queueTracks = player.queue.getAll();
+            if (queueTracks.length === 0 && !player.currentTrack) {
+              return interaction.reply({ embeds: [errorEmbed('The music queue is currently empty.')], ephemeral: true });
+            }
+            const queueBatch = queueTracks.slice(0, 10);
+            const queueList = queueBatch.map((track, i) => `\`${i + 1}.\` [${track.title}](${track.url})`).join('\n');
+            await interaction.reply({
+              embeds: [
+                successEmbed(
+                  `**Now Playing:** [${player.currentTrack?.title || 'None'}](${player.currentTrack?.url || ''})\n\n**Upcoming (Total: ${queueTracks.length}):**\n${queueList || 'No more upcoming songs.'}`
+                )
+              ],
+              ephemeral: true
+            });
+            break;
 
-        default:
-          await interaction.deferUpdate();
-          break;
+          default:
+            await interaction.deferUpdate();
+            break;
+        }
+      } catch (btnErr) {
+        console.error(`[Button Error] ${customId}:`, btnErr);
+        if (interaction.deferred) {
+          await interaction.editReply({ embeds: [errorEmbed('Failed to process control action.')] }).catch(() => {});
+        } else if (!interaction.replied) {
+          await interaction.reply({ embeds: [errorEmbed('Failed to process control action.')], ephemeral: true }).catch(() => {});
+        }
       }
     }
   }

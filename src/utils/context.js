@@ -28,12 +28,20 @@ class CommandContext {
 
   async reply(content) {
     if (this.isSlash) {
-      if (this.interaction.deferred || this.interaction.replied) {
-        return this.interaction.editReply(content);
+      try {
+        if (this.interaction.deferred || this.interaction.replied) {
+          return await this.interaction.editReply(content);
+        }
+        return await this.interaction.reply(content);
+      } catch (err) {
+        try {
+          return await this.interaction.followUp(content);
+        } catch (fErr) {
+          console.error('[CommandContext] Failed to send interaction reply:', fErr.message);
+        }
       }
-      return this.interaction.reply(content);
     } else {
-      return this.message.reply(content);
+      return this.message.reply(content).catch(() => {});
     }
   }
 

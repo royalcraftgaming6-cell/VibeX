@@ -64,12 +64,15 @@ module.exports = {
       });
     }
 
-    // Otherwise, play immediately
-    await player.play(track);
-    return ctx.reply({
+    // Otherwise, play immediately - reply to Discord immediately to clear thinking state
+    await ctx.reply({
       embeds: [
         successEmbed(`Started playing **[${track.title}](${track.url})** in **${voiceChannel.name}**`)
       ]
+    });
+
+    player.play(track).catch(err => {
+      console.error('[Play Command] Error starting player.play:', err);
     });
   }
 };

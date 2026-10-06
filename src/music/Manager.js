@@ -214,17 +214,12 @@ class MusicManager {
       }
     }
 
-    // 2. Search query: Language/profile-aware search prioritizing authentic YouTube catalog for regional music
-    const vibe = this.detectMusicProfile(query, '');
-    if (vibe === 'indian' || vibe === 'kpop' || vibe === 'anime') {
-      const ytResult = await this.searchYouTube(query, requestedBy);
-      if (ytResult) return ytResult;
-      return await this.searchSoundCloud(query, requestedBy);
-    } else {
-      const scResult = await this.searchSoundCloud(query, requestedBy);
-      if (scResult) return scResult;
-      return await this.searchYouTube(query, requestedBy);
-    }
+    // 2. Search query: Try YouTube first for fast, reliable, universal catalog results
+    const ytResult = await this.searchYouTube(query, requestedBy);
+    if (ytResult) return ytResult;
+
+    // 3. Fallback to SoundCloud
+    return await this.searchSoundCloud(query, requestedBy);
   }
 
   async searchSoundCloud(query, requestedBy) {
