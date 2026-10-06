@@ -3,6 +3,9 @@ const config = require('./config');
 const MusicManager = require('./music/Manager');
 const { loadCommands } = require('./handlers/commandHandler');
 const { loadEvents } = require('./handlers/eventHandler');
+const { startKeepAliveServer } = require('./server');
+
+let activeClient = null;
 
 function createClient(includeMessageContent = true) {
   const intents = [
@@ -19,6 +22,7 @@ function createClient(includeMessageContent = true) {
   client.musicManager = new MusicManager(client);
   loadCommands(client);
   loadEvents(client);
+  activeClient = client;
   return client;
 }
 
@@ -33,13 +37,14 @@ process.on('uncaughtException', (err, origin) => {
 
 if (!config.token || config.token === 'your_bot_token_here') {
   console.log('\n======================================================');
-  console.log('⚠️  Wizard Music Bot is ready to run!');
+  console.log('⚠️  VibeX Music Bot is ready to run!');
   console.log('Please add your Discord bot token to your .env file:');
   console.log('  DISCORD_TOKEN=your_token_here');
   console.log('  CLIENT_ID=your_client_id_here');
   console.log('======================================================\n');
 } else {
   let client = createClient(true);
+  startKeepAliveServer(client);
 
   client.login(config.token).catch(async (err) => {
     if (err.message && err.message.includes('disallowed intents')) {

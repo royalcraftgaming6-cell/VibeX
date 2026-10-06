@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: vibex-music-bot
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: DEFAULT_PREFIX
+        value: "!"
+      - key: DEFAULT_VOLUME
+        value: "80"
+      - key: PORT
+        value: "10000"

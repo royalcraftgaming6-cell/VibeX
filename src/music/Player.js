@@ -102,17 +102,33 @@ class Player {
 
     try {
       let streamInfo;
-      // Direct stream URL check or play-dl stream
       if (this.currentTrack.url && (this.currentTrack.url.endsWith('.mp3') || this.currentTrack.url.endsWith('.ogg') || this.currentTrack.isDirect)) {
         this.currentResource = createAudioResource(this.currentTrack.url, {
           inlineVolume: true
         });
       } else {
-        streamInfo = await play.stream(this.currentTrack.url);
-        this.currentResource = createAudioResource(streamInfo.stream, {
-          inputType: streamInfo.type,
-          inlineVolume: true
-        });
+        try {
+          streamInfo = await play.stream(this.currentTrack.url);
+          this.currentResource = createAudioResource(streamInfo.stream, {
+            inputType: streamInfo.type,
+            inlineVolume: true
+          });
+        } catch (streamErr) {
+          console.warn('[Player] Initial stream error:', streamErr.message);
+          // If stream failed (e.g. YouTube 429), try finding alternative on SoundCloud
+          const scFallback = await this.manager.searchSoundCloud(this.currentTrack.title, this.currentTrack.requestedBy);
+          if (scFallback) {
+            console.log(`[Player] Fallback found on SoundCloud: ${scFallback.title}`);
+            this.currentTrack = scFallback;
+            streamInfo = await play.stream(scFallback.url);
+            this.currentResource = createAudioResource(streamInfo.stream, {
+              inputType: streamInfo.type,
+              inlineVolume: true
+            });
+          } else {
+            throw streamErr;
+          }
+        }
       }
 
       this.currentResource.volume.setVolume(this.volume / 100);
@@ -123,7 +139,7 @@ class Player {
     } catch (err) {
       console.error('Error starting track playback:', err);
       if (this.textChannel) {
-        this.textChannel.send({ embeds: [errorEmbed(`Could not play track: **${this.currentTrack.title}**`)] }).catch(() => {});
+        this.textChannel.send({ embeds: [errorEmbed(`Could not play track: **${this.currentTrack.title}** (${err.message})`)] }).catch(() => {});
       }
       this.handleSongEnd();
     }
