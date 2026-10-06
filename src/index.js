@@ -35,17 +35,17 @@ process.on('uncaughtException', (err, origin) => {
   console.error(`[UNCAUGHT EXCEPTION] [${origin}]:`, err);
 });
 
+let client = createClient(true);
+startKeepAliveServer(client);
+
 if (!config.token || config.token === 'your_bot_token_here') {
   console.log('\n======================================================');
-  console.log('⚠️  VibeX Music Bot is ready to run!');
-  console.log('Please add your Discord bot token to your .env file:');
-  console.log('  DISCORD_TOKEN=your_token_here');
-  console.log('  CLIENT_ID=your_client_id_here');
+  console.log('⚡ VibeX Web Server is LIVE and listening for Render pings!');
+  console.log('⚠️ Discord Bot Token is not configured yet.');
+  console.log('👉 Add your DISCORD_TOKEN and CLIENT_ID in your Render Environment Variables:');
+  console.log('   https://dashboard.render.com -> Your Service -> Environment -> Add Environment Variable');
   console.log('======================================================\n');
 } else {
-  let client = createClient(true);
-  startKeepAliveServer(client);
-
   client.login(config.token).catch(async (err) => {
     if (err.message && err.message.includes('disallowed intents')) {
       console.warn('\n⚠️ [NOTICE]: "Message Content Intent" is not enabled in Discord Developer Portal.');
