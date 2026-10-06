@@ -7,9 +7,11 @@ const {
   entersState,
   NoSubscriberBehavior
 } = require('@discordjs/voice');
+const { EmbedBuilder } = require('discord.js');
 const play = require('play-dl');
 const Queue = require('./Queue');
 const db = require('../database');
+const config = require('../config');
 const { createNowPlayingEmbed, createPlayerButtons, errorEmbed, successEmbed, infoEmbed } = require('../utils/embed');
 
 class Player {
@@ -19,6 +21,7 @@ class Player {
     this.queue = new Queue();
 
     this.connection = null;
+    this.voiceChannel = null;
     this.audioPlayer = null;
     this.currentResource = null;
     this.currentTrack = null;
@@ -62,6 +65,7 @@ class Player {
 
   async connect(voiceChannel, textChannel = null) {
     if (textChannel) this.textChannel = textChannel;
+    if (voiceChannel) this.voiceChannel = voiceChannel;
 
     this.clearDisconnectTimer();
 
@@ -81,6 +85,16 @@ class Player {
         ]);
         // Reconnected
       } catch {
+        const settings = db.getSettings(this.guild.id);
+        if (settings.twenty_four_seven && this.voiceChannel) {
+          console.log(`[Player] 24/7 Mode: Reconnecting to voice channel in ${this.guild.name}...`);
+          try {
+            await this.connect(this.voiceChannel, this.textChannel);
+            return;
+          } catch (reconnectErr) {
+            console.error('[Player] 24/7 Reconnect attempt error:', reconnectErr.message);
+          }
+        }
         // Disconnect confirmed
         this.destroy();
       }
@@ -273,24 +287,34 @@ class Player {
   }
 
   handleQueueEmpty() {
+    const settings = db.getSettings(this.guild.id);
+
+    // Keep control panel active with buttons ready
     if (this.nowPlayingMessage) {
-      this.nowPlayingMessage.edit({ components: [] }).catch(() => {});
-      this.nowPlayingMessage = null;
+      const components = createPlayerButtons(this);
+      const embed = new EmbedBuilder()
+        .setColor(config.colors.primary)
+        .setTitle('🎵 VibeX — Control Panel (24/7 Active)')
+        .setDescription(`Queue finished. The bot is staying connected in voice 24/7!\nUse the buttons below or \`/play <song>\` to play more music.\n\n📻 **Autoplay:** ${this.autoplay ? 'Enabled ✅ (Ready)' : 'Disabled ❌'}`)
+        .setFooter({ text: '24/7 Continuous Mode Active • Developed by WIZARD OG' });
+
+      this.nowPlayingMessage.edit({ embeds: [embed], components }).catch(() => {});
     }
 
-    const settings = db.getSettings(this.guild.id);
     if (!settings.twenty_four_seven) {
-      // Inactivity timeout: disconnect after 2 minutes of idle
+      // Inactivity timeout: disconnect after 2 minutes only if 24/7 is explicitly disabled
       this.startDisconnectTimer(120000);
     }
   }
 
   startDisconnectTimer(ms) {
     this.clearDisconnectTimer();
+    const settings = db.getSettings(this.guild.id);
+    if (settings.twenty_four_seven) return;
+
     this.disconnectTimeout = setTimeout(() => {
-      if (this.textChannel) {
-        this.textChannel.send({ embeds: [errorEmbed('Left voice channel due to inactivity.')] }).catch(() => {});
-      }
+      const current = db.getSettings(this.guild.id);
+      if (current.twenty_four_seven) return;
       this.destroy();
     }, ms);
   }

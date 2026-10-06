@@ -29,14 +29,22 @@ module.exports = {
 
     await ctx.defer();
 
-    const voiceChannel = ctx.member.voice.channel;
+    const botVoiceChannel = ctx.guild.members.me?.voice?.channel;
+    const voiceChannel = ctx.member.voice?.channel || botVoiceChannel;
+
+    if (!voiceChannel) {
+      return ctx.sendError('Please join a voice channel to start playing music!');
+    }
+
     const player = ctx.manager.getPlayer(ctx.guild, true);
 
     try {
-      await player.connect(voiceChannel, ctx.channel);
+      if (!player.connection || !botVoiceChannel) {
+        await player.connect(voiceChannel, ctx.channel);
+      }
     } catch (err) {
       console.error('Failed to connect to voice channel:', err);
-      return ctx.sendError('Failed to join your voice channel. Please check my channel permissions!');
+      return ctx.sendError('Failed to join the voice channel. Please check my channel permissions!');
     }
 
     const track = await ctx.manager.resolveTrack(query, ctx.user);

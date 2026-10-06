@@ -40,8 +40,8 @@ function getDefaultSettings(guildId) {
     dj_role: null,
     default_volume: 80,
     announce_channel: null,
-    twenty_four_seven: 0,
-    autoplay: 0
+    twenty_four_seven: 1, // Default 24/7 stay active
+    autoplay: 1 // Default Rythm-style autoplay
   };
 }
 

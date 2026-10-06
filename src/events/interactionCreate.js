@@ -85,14 +85,6 @@ module.exports = {
         });
       }
 
-      const voiceCheck = checkVoiceConditions(interaction, true);
-      if (!voiceCheck.canProceed) {
-        return interaction.reply({
-          embeds: [errorEmbed(voiceCheck.reason)],
-          ephemeral: true
-        });
-      }
-
       if (!isDJ(interaction.member)) {
         return interaction.reply({
           embeds: [errorEmbed('You must have the DJ role to use player buttons.')],
@@ -105,9 +97,17 @@ module.exports = {
           if (player.isPaused) {
             player.resume();
             await interaction.reply({ embeds: [successEmbed('Resumed playback.')], ephemeral: true });
-          } else {
+          } else if (player.currentTrack) {
             player.pause();
             await interaction.reply({ embeds: [successEmbed('Paused playback.')], ephemeral: true });
+          } else if (player.previousTrack) {
+            await player.play(player.previousTrack);
+            await interaction.reply({ embeds: [successEmbed(`Playing **${player.previousTrack.title}**`)], ephemeral: true });
+          } else if (!player.queue.isEmpty()) {
+            await player.play(player.queue.next());
+            await interaction.reply({ embeds: [successEmbed('Started playback from queue.')], ephemeral: true });
+          } else {
+            await interaction.reply({ embeds: [errorEmbed('Queue is empty. Use `/play <song>` to play music!')], ephemeral: true });
           }
           break;
 
@@ -121,8 +121,8 @@ module.exports = {
           break;
 
         case 'music_stop':
-          player.destroy();
-          await interaction.reply({ embeds: [successEmbed('Playback stopped and queue cleared.')], ephemeral: true });
+          player.stop();
+          await interaction.reply({ embeds: [successEmbed('Playback stopped and queue cleared. Bot is staying connected 24/7.')], ephemeral: true });
           break;
 
         case 'music_loop':
