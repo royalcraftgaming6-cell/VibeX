@@ -48,8 +48,15 @@ function createNowPlayingEmbed(track, player) {
         inline: true
       },
       {
+        name: '📻 Autoplay',
+        value: player.autoplay ? 'Enabled ✅' : 'Disabled ❌',
+        inline: true
+      },
+      {
         name: '👤 Requested by',
-        value: `${track.requestedBy?.tag || track.requestedBy?.username || 'User'}`,
+        value: track.isAutoplay
+          ? '📻 `Autoplay (Rythm)`'
+          : `${track.requestedBy?.tag || track.requestedBy?.username || 'User'}`,
         inline: true
       }
     );
@@ -91,7 +98,20 @@ function createPlayerButtons(player) {
       .setStyle(ButtonStyle.Secondary)
   );
 
-  return [row1];
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('music_autoplay')
+      .setEmoji('📻')
+      .setLabel(player.autoplay ? 'Autoplay: ON' : 'Autoplay: OFF')
+      .setStyle(player.autoplay ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('music_queue')
+      .setEmoji('📜')
+      .setLabel('Queue')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  return [row1, row2];
 }
 
 function errorEmbed(message) {

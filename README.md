@@ -12,6 +12,7 @@ A Discord music bot featuring both **Slash Commands** (`/`) and **Prefix Command
 - **Persistent Settings (SQLite):** Configurable prefix, DJ roles, default volumes, and 24/7 persistent voice mode saved in SQLite (`data/wizard_music.db`).
 - **DJ Permission System:** Restrict playback controls (`skip`, `stop`, `loop`, `shuffle`, `volume`) to users with the DJ role or Administrator rights.
 - **Render 24/7 Ready:** Built-in HTTP health check and status server (`src/server.js`) listening on `$PORT` with `/health` endpoint to keep the bot active 24/7.
+- **Rythm-Style Autoplay:** Seamlessly find and queue similar/recommended tracks when the queue finishes, with SQLite persistence per server.
 - **Smart Fallback Engine:** Multi-source streaming supporting SoundCloud, Spotify metadata, YouTube, and direct audio files with automatic cloud fallback.
 
 ---
@@ -89,6 +90,7 @@ To listen to music with VibeX in your Discord server:
 | `/nowplaying` | `!np`, `!current` | View current track details with live progress bar and buttons | Everyone |
 | `/volume [1-100]`| `!vol`, `!v` | Adjust the playback volume | DJ |
 | `/loop [mode]` | `!loop`, `!repeat`| Cycle loop mode: Off ❌ / Track 🔂 / Queue 🔁 | DJ |
+| `/autoplay [on/off]` | `!ap`, `!autoplay`| Toggle Rythm-style autoplay for similar songs | DJ |
 | `/shuffle` | `!shuffle`, `!mix`| Randomize remaining songs in the queue | DJ |
 | `/settings` | `!settings`, `!conf`| View server configuration | Everyone |
 | `/prefix <new>`| `!prefix` | Update custom server prefix | Admin |

@@ -30,7 +30,8 @@ module.exports = {
             `\`${prefix}nowplaying\` - Show details and progress of current song`,
             `\`${prefix}volume <1-100>\` - Adjust the player volume`,
             `\`${prefix}loop\` - Toggle loop mode (Off / Track / Queue)`,
-            `\`${prefix}shuffle\` - Randomize the song queue order`
+            `\`${prefix}shuffle\` - Randomize the song queue order`,
+            `\`${prefix}autoplay\` - Toggle Rythm-style autoplay for similar songs`
           ].join('\n')
         },
         {

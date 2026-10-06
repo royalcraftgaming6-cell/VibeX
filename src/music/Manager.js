@@ -156,6 +156,121 @@ class MusicManager {
     }
     return null;
   }
+
+  cleanTitle(rawTitle) {
+    if (!rawTitle) return '';
+    return rawTitle
+      .replace(/\(official\s*(music)?\s*(video|audio|lyrics?|visualizer|remaster|hd|4k)?\)/gi, '')
+      .replace(/\[official\s*(music)?\s*(video|audio|lyrics?|visualizer|remaster|hd|4k)?\]/gi, '')
+      .replace(/\((lyrics?|hd|4k|audio|remastered|remaster|visualizer)\)/gi, '')
+      .replace(/\[(lyrics?|hd|4k|audio|remastered|remaster|visualizer)\]/gi, '')
+      .replace(/\|.*$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  async getAutoplayTrack(previousTrack, history = []) {
+    if (!previousTrack) return null;
+
+    const cleaned = this.cleanTitle(previousTrack.title || '');
+    let artist = previousTrack.artist || '';
+    if (['youtube', 'soundcloud', 'web audio'].includes(artist.toLowerCase())) {
+      artist = '';
+    }
+
+    let songName = cleaned;
+    if (cleaned.includes(' - ')) {
+      const parts = cleaned.split(' - ');
+      if (!artist) artist = parts[0].trim();
+      songName = parts.slice(1).join(' - ').trim();
+    } else if (cleaned.includes(' : ')) {
+      const parts = cleaned.split(' : ');
+      if (!artist) artist = parts[0].trim();
+      songName = parts.slice(1).join(' : ').trim();
+    }
+
+    const historySet = new Set(history.map(h => (typeof h === 'string' ? h.toLowerCase() : '')));
+    if (previousTrack.url) historySet.add(previousTrack.url.toLowerCase());
+    if (previousTrack.title) historySet.add(this.cleanTitle(previousTrack.title).toLowerCase());
+
+    const queries = [];
+    if (artist && songName && artist.toLowerCase() !== songName.toLowerCase()) {
+      queries.push({ q: `${artist} top songs audio`, source: 'youtube' });
+      queries.push({ q: `${artist} audio`, source: 'youtube' });
+      queries.push({ q: artist, source: 'soundcloud' });
+      queries.push({ q: `${songName} radio mix`, source: 'youtube' });
+    } else if (artist) {
+      queries.push({ q: `${artist} songs`, source: 'youtube' });
+      queries.push({ q: artist, source: 'soundcloud' });
+    } else {
+      queries.push({ q: `${cleaned} music`, source: 'youtube' });
+      queries.push({ q: cleaned, source: 'soundcloud' });
+    }
+
+    const candidates = [];
+
+    for (const item of queries) {
+      try {
+        if (item.source === 'youtube') {
+          const results = await play.search(item.q, { limit: 8, source: { youtube: 'video' } });
+          for (const res of results) {
+            const dur = res.durationInSec || 0;
+            if (dur < 45 || dur > 720) continue;
+            const urlLower = res.url.toLowerCase();
+            const titleClean = this.cleanTitle(res.title || '').toLowerCase();
+            if (historySet.has(urlLower) || historySet.has(titleClean)) continue;
+            if (songName.length > 3 && titleClean.includes(songName.toLowerCase())) continue;
+
+            candidates.push({
+              title: res.title,
+              url: res.url,
+              artist: res.channel?.name || artist || 'YouTube',
+              duration: dur,
+              thumbnail: res.thumbnails?.[0]?.url || null,
+              source: 'youtube'
+            });
+          }
+        } else if (item.source === 'soundcloud') {
+          const results = await play.search(item.q, { limit: 8, source: { soundcloud: 'tracks' } });
+          for (const res of results) {
+            const dur = Math.floor((res.durationInMs || 0) / 1000);
+            if (dur < 45 || dur > 720) continue;
+            const urlLower = (res.url || '').toLowerCase();
+            const titleClean = this.cleanTitle(res.name || '').toLowerCase();
+            if (historySet.has(urlLower) || historySet.has(titleClean)) continue;
+            if (songName.length > 3 && titleClean.includes(songName.toLowerCase())) continue;
+
+            candidates.push({
+              title: res.name,
+              url: res.url,
+              artist: res.user?.name || artist || 'SoundCloud',
+              duration: dur,
+              thumbnail: res.thumbnail || null,
+              source: 'soundcloud'
+            });
+          }
+        }
+        if (candidates.length >= 6) break;
+      } catch (err) {
+        console.warn(`[MusicManager] Autoplay search failed for "${item.q}":`, err.message);
+      }
+    }
+
+    if (candidates.length === 0) return null;
+    const pool = candidates.slice(0, Math.min(3, candidates.length));
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+    return {
+      ...chosen,
+      requestedBy: {
+        username: 'Autoplay (Rythm)',
+        tag: 'Autoplay',
+        displayAvatarURL: () => 'https://cdn.discordapp.com/emojis/852899478148841482.webp'
+      },
+      isAutoplay: true,
+      basedOn: previousTrack.title
+    };
+  }
 }
 
 module.exports = MusicManager;

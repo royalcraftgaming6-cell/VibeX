@@ -10,7 +10,7 @@ const {
 const play = require('play-dl');
 const Queue = require('./Queue');
 const db = require('../database');
-const { createNowPlayingEmbed, createPlayerButtons, errorEmbed } = require('../utils/embed');
+const { createNowPlayingEmbed, createPlayerButtons, errorEmbed, successEmbed, infoEmbed } = require('../utils/embed');
 
 class Player {
   constructor(guild, manager) {
@@ -22,6 +22,8 @@ class Player {
     this.audioPlayer = null;
     this.currentResource = null;
     this.currentTrack = null;
+    this.previousTrack = null;
+    this.history = [];
 
     this.textChannel = null;
     this.nowPlayingMessage = null;
@@ -30,8 +32,10 @@ class Player {
     const settings = db.getSettings(guild.id);
     this.volume = settings.default_volume || 80;
     this.loopMode = 0; // 0 = off, 1 = track, 2 = queue
+    this.autoplay = Boolean(settings.autoplay);
     this.isPaused = false;
     this.disconnectTimeout = null;
+    this.isFetchingAutoplay = false;
 
     this.initAudioPlayer();
   }
@@ -98,6 +102,16 @@ class Player {
 
     if (!this.currentTrack) {
       return this.handleQueueEmpty();
+    }
+
+    if (this.currentTrack.url) {
+      this.history.push(this.currentTrack.url.toLowerCase());
+    }
+    if (this.currentTrack.title) {
+      this.history.push(this.currentTrack.title.toLowerCase());
+    }
+    if (this.history.length > 200) {
+      this.history.splice(0, 50);
     }
 
     try {
@@ -177,8 +191,11 @@ class Player {
     }
   }
 
-  handleSongEnd() {
+  async handleSongEnd() {
     const previous = this.currentTrack;
+    if (previous) {
+      this.previousTrack = previous;
+    }
 
     // Loop Single Track
     if (this.loopMode === 1 && previous) {
@@ -193,8 +210,64 @@ class Player {
     const nextTrack = this.queue.next();
     if (nextTrack) {
       this.play(nextTrack);
+    } else if (this.autoplay && (previous || this.previousTrack)) {
+      this.currentTrack = null;
+      await this.handleAutoplay(previous || this.previousTrack);
     } else {
       this.currentTrack = null;
+      this.handleQueueEmpty();
+    }
+  }
+
+  async handleAutoplay(referenceTrack) {
+    if (!referenceTrack || this.isFetchingAutoplay) return;
+    this.isFetchingAutoplay = true;
+
+    try {
+      if (this.nowPlayingMessage) {
+        this.nowPlayingMessage.edit({ components: [] }).catch(() => {});
+        this.nowPlayingMessage = null;
+      }
+
+      if (this.textChannel) {
+        this.textChannel.send({
+          embeds: [infoEmbed('📻 Autoplay', `Queue finished. Finding similar songs like **${referenceTrack.title}**...`)]
+        }).catch(() => {});
+      }
+
+      const nextTrack = await this.manager.getAutoplayTrack(referenceTrack, this.history);
+
+      if (!this.connection || !this.audioPlayer) {
+        this.isFetchingAutoplay = false;
+        return;
+      }
+
+      // If tracks were added to the queue while searching
+      if (!this.queue.isEmpty()) {
+        this.isFetchingAutoplay = false;
+        return this.play(this.queue.next());
+      }
+
+      if (nextTrack) {
+        if (this.textChannel) {
+          this.textChannel.send({
+            embeds: [successEmbed(`📻 Autoplay: Next song **[${nextTrack.title}](${nextTrack.url})** by *${nextTrack.artist}* (similar to *${referenceTrack.title}*)`)]
+          }).catch(() => {});
+        }
+        this.isFetchingAutoplay = false;
+        await this.play(nextTrack);
+      } else {
+        if (this.textChannel) {
+          this.textChannel.send({
+            embeds: [infoEmbed('📻 Autoplay', 'Could not find more similar songs. Playback ended.')]
+          }).catch(() => {});
+        }
+        this.isFetchingAutoplay = false;
+        this.handleQueueEmpty();
+      }
+    } catch (err) {
+      console.error('[Player] Error during autoplay:', err);
+      this.isFetchingAutoplay = false;
       this.handleQueueEmpty();
     }
   }
@@ -258,6 +331,7 @@ class Player {
     this.queue.clear();
     this.currentTrack = null;
     this.loopMode = 0;
+    this.isFetchingAutoplay = false;
     this.audioPlayer.stop(true);
     this.handleQueueEmpty();
     return true;
@@ -279,6 +353,23 @@ class Player {
     return this.loopMode;
   }
 
+  setAutoplay(mode) {
+    this.autoplay = Boolean(mode);
+    db.setAutoplay(this.guild.id, this.autoplay);
+    this.updateNowPlayingMessage();
+
+    // If turned on while idle and we have a previous track or queue
+    if (this.autoplay && !this.currentTrack && this.connection && (this.previousTrack || !this.queue.isEmpty())) {
+      if (!this.queue.isEmpty()) {
+        this.play(this.queue.next());
+      } else if (this.previousTrack) {
+        this.handleAutoplay(this.previousTrack);
+      }
+    }
+
+    return this.autoplay;
+  }
+
   shuffle() {
     this.queue.shuffle();
   }
@@ -287,6 +378,7 @@ class Player {
     this.clearDisconnectTimer();
     this.queue.clear();
     this.currentTrack = null;
+    this.isFetchingAutoplay = false;
 
     if (this.nowPlayingMessage) {
       this.nowPlayingMessage.delete().catch(() => {});

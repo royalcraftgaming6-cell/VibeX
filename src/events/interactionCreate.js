@@ -140,6 +140,34 @@ module.exports = {
           await interaction.reply({ embeds: [successEmbed(`Shuffled **${player.queue.size()}** tracks in queue.`)], ephemeral: true });
           break;
 
+        case 'music_autoplay':
+          const newAutoplay = !player.autoplay;
+          player.setAutoplay(newAutoplay);
+          await interaction.reply({
+            embeds: [
+              successEmbed(`Autoplay is now **${newAutoplay ? 'ENABLED 📻' : 'DISABLED ❌'}**.\n${newAutoplay ? 'Similar songs will play automatically when the queue ends (Rythm style).' : 'Playback will stop when the queue ends.'}`)
+            ],
+            ephemeral: true
+          });
+          break;
+
+        case 'music_queue':
+          const queueTracks = player.queue.getAll();
+          if (queueTracks.length === 0 && !player.currentTrack) {
+            return interaction.reply({ embeds: [errorEmbed('The music queue is currently empty.')], ephemeral: true });
+          }
+          const queueBatch = queueTracks.slice(0, 10);
+          const queueList = queueBatch.map((track, i) => `\`${i + 1}.\` [${track.title}](${track.url})`).join('\n');
+          await interaction.reply({
+            embeds: [
+              successEmbed(
+                `**Now Playing:** [${player.currentTrack?.title || 'None'}](${player.currentTrack?.url || ''})\n\n**Upcoming (Total: ${queueTracks.length}):**\n${queueList || 'No more upcoming songs.'}`
+              )
+            ],
+            ephemeral: true
+          });
+          break;
+
         default:
           await interaction.deferUpdate();
           break;

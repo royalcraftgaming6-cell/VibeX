@@ -61,6 +61,7 @@ Wizard-Music/
 │   │   │   ├── queue.js
 │   │   │   ├── shuffle.js
 │   │   │   ├── loop.js
+│   │   │   ├── autoplay.js
 │   │   │   └── volume.js
 │   │   └── settings/
 │   │       ├── dj.js
@@ -91,7 +92,7 @@ Wizard-Music/
 | **Music** | `/play`, `/search` | `!play`, `!search` |
 | **Playback** | `/pause`, `/resume`, `/skip`, `/stop` | `!pause`, `!resume`, `!skip`, `!stop` |
 | **Queue** | `/queue`, `/remove`, `/clear`, `/shuffle` | `!queue`, `!remove`, `!clear`, `!shuffle` |
-| **Loop/Volume** | `/loop`, `/volume` | `!loop`, `!volume` |
+| **Loop/Volume/Autoplay** | `/loop`, `/volume`, `/autoplay` | `!loop`, `!volume`, `!autoplay`, `!ap` |
 | **Info** | `/nowplaying`, `/help`, `/ping` | `!np`, `!help`, `!ping` |
 | **Settings** | `/settings`, `/dj`, `/prefix`, `/247` | `!settings`, `!dj`, `!prefix`, `!247` |
 
