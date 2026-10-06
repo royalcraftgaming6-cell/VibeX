@@ -15,8 +15,8 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
-      .setTitle('🧙‍♂️ Wizard Music — Commands Help')
-      .setDescription(`All commands are available as both **Slash Commands** (\`/command\`) and **Prefix Commands** (\`${prefix}command\`).\n`)
+      .setTitle('🎵 VibeX — Music Bot Commands')
+      .setDescription(`Professional 24/7 Discord Music Bot • Developed by **WIZARD OG**\n\nAll commands are available as both **Slash Commands** (\`/command\`) and **Prefix Commands** (\`${prefix}command\`).\n`)
       .addFields(
         {
           name: '🎵 Music Commands',
@@ -51,7 +51,7 @@ module.exports = {
           ].join('\n')
         }
       )
-      .setFooter({ text: 'Wizard Music • Professional Audio Bot', iconURL: ctx.client.user.displayAvatarURL() });
+      .setFooter({ text: 'VibeX Music Bot • Developed by WIZARD OG', iconURL: ctx.client.user.displayAvatarURL() });
 
     await ctx.reply({ embeds: [embed] });
   }

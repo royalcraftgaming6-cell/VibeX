@@ -1,7 +1,7 @@
 {
-  "name": "wizard-music-bot",
+  "name": "vibex-music-bot",
   "version": "1.0.0",
-  "description": "Professional Discord music bot with Slash & Prefix commands, queue system, and SQLite settings.",
+  "description": "VibeX — Discord Music Bot developed by WIZARD OG",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -10,10 +10,11 @@
   "keywords": [
     "discord",
     "music-bot",
-    "discordjs",
+    "vibex",
+    "wizard-og",
     "audio"
   ],
-  "author": "",
+  "author": "WIZARD OG",
   "license": "ISC",
   "dependencies": {
     "@discordjs/voice": "^0.19.2",

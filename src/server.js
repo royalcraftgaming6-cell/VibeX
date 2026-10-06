@@ -137,8 +137,8 @@ function startKeepAliveServer(client) {
       <div class="badge-dot"></div>
       Online & 24/7 Active
     </div>
-    <h1>🎵 VibeX Music</h1>
-    <p class="subtitle">Rythm-style Discord Music Bot with 24/7 Support</p>
+    <h1>🎵 VibeX</h1>
+    <p class="subtitle">Music Bot • Developed by <strong>WIZARD OG</strong></p>
     <div class="stats-grid">
       <div class="stat-box">
         <div class="stat-label">Servers</div>
@@ -158,7 +158,7 @@ function startKeepAliveServer(client) {
       </div>
     </div>
     <div class="footer">
-      Powered by <a href="https://github.com/royalcraftgaming6-cell/VibeX" target="_blank">VibeX</a> • Ready for Render deployment
+      Developed with ❤️ by <strong>WIZARD OG</strong> • <a href="https://github.com/royalcraftgaming6-cell/VibeX" target="_blank">VibeX GitHub</a>
     </div>
   </div>
 </body>

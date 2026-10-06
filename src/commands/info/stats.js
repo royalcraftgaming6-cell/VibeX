@@ -22,15 +22,17 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(config.colors.primary)
-      .setTitle('📊 Wizard Music — Statistics')
+      .setTitle('📊 VibeX — Statistics')
+      .setDescription('🎵 **VibeX** — Discord Music Bot • Developed by **WIZARD OG**')
       .addFields(
+        { name: '👑 Developer', value: '`WIZARD OG`', inline: true },
         { name: '🌐 Servers', value: `${guildsCount}`, inline: true },
         { name: '👥 Total Users', value: `${usersCount}`, inline: true },
         { name: '⏱️ Uptime', value: uptimeStr, inline: true },
         { name: '💾 Memory Usage', value: `${memoryMB} MB`, inline: true },
-        { name: '🟢 Node.js', value: process.version, inline: true },
-        { name: '🤖 Discord.js', value: 'v14.18.0', inline: true }
-      );
+        { name: '🟢 Node.js', value: process.version, inline: true }
+      )
+      .setFooter({ text: 'VibeX Music Bot • Developed by WIZARD OG' });
 
     await ctx.reply({ embeds: [embed] });
   }
